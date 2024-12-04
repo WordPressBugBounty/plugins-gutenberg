@@ -6563,12 +6563,12 @@ const __EXPERIMENTAL_STYLE_PROPERTY = {
   },
   borderColor: {
     value: ['border', 'color'],
-    support: ['__experimentalBorder', 'color'],
+    support: ['border', 'color'],
     useEngine: true
   },
   borderRadius: {
     value: ['border', 'radius'],
-    support: ['__experimentalBorder', 'radius'],
+    support: ['border', 'radius'],
     properties: {
       borderTopLeftRadius: 'topLeft',
       borderTopRightRadius: 'topRight',
@@ -6579,72 +6579,72 @@ const __EXPERIMENTAL_STYLE_PROPERTY = {
   },
   borderStyle: {
     value: ['border', 'style'],
-    support: ['__experimentalBorder', 'style'],
+    support: ['border', 'style'],
     useEngine: true
   },
   borderWidth: {
     value: ['border', 'width'],
-    support: ['__experimentalBorder', 'width'],
+    support: ['border', 'width'],
     useEngine: true
   },
   borderTopColor: {
     value: ['border', 'top', 'color'],
-    support: ['__experimentalBorder', 'color'],
+    support: ['border', 'color'],
     useEngine: true
   },
   borderTopStyle: {
     value: ['border', 'top', 'style'],
-    support: ['__experimentalBorder', 'style'],
+    support: ['border', 'style'],
     useEngine: true
   },
   borderTopWidth: {
     value: ['border', 'top', 'width'],
-    support: ['__experimentalBorder', 'width'],
+    support: ['border', 'width'],
     useEngine: true
   },
   borderRightColor: {
     value: ['border', 'right', 'color'],
-    support: ['__experimentalBorder', 'color'],
+    support: ['border', 'color'],
     useEngine: true
   },
   borderRightStyle: {
     value: ['border', 'right', 'style'],
-    support: ['__experimentalBorder', 'style'],
+    support: ['border', 'style'],
     useEngine: true
   },
   borderRightWidth: {
     value: ['border', 'right', 'width'],
-    support: ['__experimentalBorder', 'width'],
+    support: ['border', 'width'],
     useEngine: true
   },
   borderBottomColor: {
     value: ['border', 'bottom', 'color'],
-    support: ['__experimentalBorder', 'color'],
+    support: ['border', 'color'],
     useEngine: true
   },
   borderBottomStyle: {
     value: ['border', 'bottom', 'style'],
-    support: ['__experimentalBorder', 'style'],
+    support: ['border', 'style'],
     useEngine: true
   },
   borderBottomWidth: {
     value: ['border', 'bottom', 'width'],
-    support: ['__experimentalBorder', 'width'],
+    support: ['border', 'width'],
     useEngine: true
   },
   borderLeftColor: {
     value: ['border', 'left', 'color'],
-    support: ['__experimentalBorder', 'color'],
+    support: ['border', 'color'],
     useEngine: true
   },
   borderLeftStyle: {
     value: ['border', 'left', 'style'],
-    support: ['__experimentalBorder', 'style'],
+    support: ['border', 'style'],
     useEngine: true
   },
   borderLeftWidth: {
     value: ['border', 'left', 'width'],
-    support: ['__experimentalBorder', 'width'],
+    support: ['border', 'width'],
     useEngine: true
   },
   color: {
@@ -6800,13 +6800,22 @@ const __EXPERIMENTAL_PATHS_WITH_OVERRIDE = {
   'typography.fontSizes': true,
   'spacing.spacingSizes': true
 };
-const TYPOGRAPHY_SUPPORTS_EXPERIMENTAL_TO_STABLE = {
-  __experimentalFontFamily: 'fontFamily',
-  __experimentalFontStyle: 'fontStyle',
-  __experimentalFontWeight: 'fontWeight',
-  __experimentalLetterSpacing: 'letterSpacing',
-  __experimentalTextDecoration: 'textDecoration',
-  __experimentalTextTransform: 'textTransform'
+const EXPERIMENTAL_SUPPORTS_MAP = {
+  __experimentalBorder: 'border'
+};
+const COMMON_EXPERIMENTAL_PROPERTIES = {
+  __experimentalDefaultControls: 'defaultControls',
+  __experimentalSkipSerialization: 'skipSerialization'
+};
+const EXPERIMENTAL_SUPPORT_PROPERTIES = {
+  typography: {
+    __experimentalFontFamily: 'fontFamily',
+    __experimentalFontStyle: 'fontStyle',
+    __experimentalFontWeight: 'fontWeight',
+    __experimentalLetterSpacing: 'letterSpacing',
+    __experimentalTextDecoration: 'textDecoration',
+    __experimentalTextTransform: 'textTransform'
+  }
 };
 
 ;// external ["wp","warning"]
@@ -9511,20 +9520,124 @@ function mergeBlockVariations(bootstrappedVariations = [], clientVariations = []
   });
   return result;
 }
+
+/**
+ * Stabilizes a block support configuration by converting experimental properties
+ * to their stable equivalents.
+ *
+ * @param {Object} unstableConfig   The support configuration to stabilize.
+ * @param {string} stableSupportKey The stable support key for looking up properties.
+ * @return {Object} The stabilized support configuration.
+ */
+function stabilizeSupportConfig(unstableConfig, stableSupportKey) {
+  const stableConfig = {};
+  for (const [key, value] of Object.entries(unstableConfig)) {
+    var _ref, _EXPERIMENTAL_SUPPORT;
+    // Get stable key from support-specific map, common properties map, or keep original.
+    const stableKey = (_ref = (_EXPERIMENTAL_SUPPORT = EXPERIMENTAL_SUPPORT_PROPERTIES[stableSupportKey]?.[key]) !== null && _EXPERIMENTAL_SUPPORT !== void 0 ? _EXPERIMENTAL_SUPPORT : COMMON_EXPERIMENTAL_PROPERTIES[key]) !== null && _ref !== void 0 ? _ref : key;
+    stableConfig[stableKey] = value;
+
+    /*
+     * The `__experimentalSkipSerialization` key needs to be kept until
+     * WP 6.8 becomes the minimum supported version. This is due to the
+     * core `wp_should_skip_block_supports_serialization` function only
+     * checking for `__experimentalSkipSerialization` in earlier versions.
+     */
+    if (key === '__experimentalSkipSerialization' || key === 'skipSerialization') {
+      stableConfig.__experimentalSkipSerialization = value;
+    }
+  }
+  return stableConfig;
+}
+
+/**
+ * Stabilizes experimental block supports by converting experimental keys and properties
+ * to their stable equivalents.
+ *
+ * @param {Object|undefined} rawSupports The block supports configuration to stabilize.
+ * @return {Object|undefined} The stabilized block supports configuration.
+ */
 function stabilizeSupports(rawSupports) {
   if (!rawSupports) {
     return rawSupports;
   }
 
-  // Create a new object to avoid mutating the original. This ensures that
-  // custom block plugins that rely on immutable supports are not affected.
-  // See: https://github.com/WordPress/gutenberg/pull/66849#issuecomment-2463614281
+  /*
+   * Create a new object to avoid mutating the original. This ensures that
+   * custom block plugins that rely on immutable supports are not affected.
+   * See: https://github.com/WordPress/gutenberg/pull/66849#issuecomment-2463614281
+   */
   const newSupports = {};
-  for (const [key, value] of Object.entries(rawSupports)) {
-    if (key === 'typography' && typeof value === 'object' && value !== null) {
-      newSupports.typography = Object.fromEntries(Object.entries(value).map(([typographyKey, typographyValue]) => [TYPOGRAPHY_SUPPORTS_EXPERIMENTAL_TO_STABLE[typographyKey] || typographyKey, typographyValue]));
+  const done = {};
+  for (const [support, config] of Object.entries(rawSupports)) {
+    var _EXPERIMENTAL_SUPPORT2;
+    /*
+     * If this support config has already been stabilized, skip it.
+     * A stable support key occurring after an experimental key, gets
+     * stabilized then so that the two configs can be merged effectively.
+     */
+    if (done[support]) {
+      continue;
+    }
+    const stableSupportKey = (_EXPERIMENTAL_SUPPORT2 = EXPERIMENTAL_SUPPORTS_MAP[support]) !== null && _EXPERIMENTAL_SUPPORT2 !== void 0 ? _EXPERIMENTAL_SUPPORT2 : support;
+
+    /*
+     * Use the support's config as is when it's not in need of stabilization.
+     * A support does not need stabilization if:
+     * - The support key doesn't need stabilization AND
+     * - Either:
+     *     - The config isn't an object, so can't have experimental properties OR
+     *     - The config is an object but has no experimental properties to stabilize.
+     */
+    if (support === stableSupportKey && (!isPlainObject(config) || !EXPERIMENTAL_SUPPORT_PROPERTIES[stableSupportKey] && Object.keys(config).every(key => !COMMON_EXPERIMENTAL_PROPERTIES[key]))) {
+      newSupports[support] = config;
+      continue;
+    }
+
+    // Stabilize the config value.
+    const stableConfig = isPlainObject(config) ? stabilizeSupportConfig(config, stableSupportKey) : config;
+
+    /*
+     * If a plugin overrides the support config with the `blocks.registerBlockType`
+     * filter, both experimental and stable configs may be present. In that case,
+     * use the order keys are defined in to determine the final value.
+     *    - If config is an array, merge the arrays in their order of definition.
+     *    - If config is not an array, use the value defined last.
+     *
+     * The reason for preferring the last defined key is that after filters
+     * are applied, the last inserted key is likely the most up-to-date value.
+     * We cannot determine with certainty which value was "last modified" so
+     * the insertion order is the best guess. The extreme edge case of multiple
+     * filters tweaking the same support property will become less over time as
+     * extenders migrate existing blocks and plugins to stable keys.
+     */
+    if (support !== stableSupportKey && Object.hasOwn(rawSupports, stableSupportKey)) {
+      var _keyPositions$support, _keyPositions$stableS;
+      const keyPositions = Object.keys(rawSupports).reduce((acc, key, index) => {
+        acc[key] = index;
+        return acc;
+      }, {});
+      const experimentalFirst = ((_keyPositions$support = keyPositions[support]) !== null && _keyPositions$support !== void 0 ? _keyPositions$support : Number.MAX_VALUE) < ((_keyPositions$stableS = keyPositions[stableSupportKey]) !== null && _keyPositions$stableS !== void 0 ? _keyPositions$stableS : Number.MAX_VALUE);
+      if (isPlainObject(rawSupports[stableSupportKey])) {
+        /*
+         * To merge the alternative support config effectively, it also needs to be
+         * stabilized before merging to keep stabilized and experimental flags in sync.
+         */
+        rawSupports[stableSupportKey] = stabilizeSupportConfig(rawSupports[stableSupportKey], stableSupportKey);
+        newSupports[stableSupportKey] = experimentalFirst ? {
+          ...stableConfig,
+          ...rawSupports[stableSupportKey]
+        } : {
+          ...rawSupports[stableSupportKey],
+          ...stableConfig
+        };
+        // Prevents reprocessing this support as it was merged above.
+        done[stableSupportKey] = true;
+      } else {
+        newSupports[stableSupportKey] = experimentalFirst ? rawSupports[stableSupportKey] : stableConfig;
+      }
     } else {
-      newSupports[key] = value;
+      newSupports[stableSupportKey] = stableConfig;
     }
   }
   return newSupports;
