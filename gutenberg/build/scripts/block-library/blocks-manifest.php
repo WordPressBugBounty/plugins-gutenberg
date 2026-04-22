@@ -7403,10 +7403,6 @@ return array(
 				'default' => array(
 					
 				)
-			),
-			'isSearchFieldHidden' => array(
-				'type' => 'boolean',
-				'default' => false
 			)
 		),
 		'supports' => array(
@@ -7457,7 +7453,11 @@ return array(
 			'html' => false
 		),
 		'editorStyle' => 'wp-block-search-editor',
-		'style' => 'wp-block-search'
+		'style' => 'wp-block-search',
+		'selectors' => array(
+			'color' => '.wp-block-search .wp-block-search__button, .wp-block-search.wp-block-search__no-button .wp-block-search__input',
+			'border' => '.wp-block-search.wp-block-search__button-outside .wp-block-search__input, .wp-block-search.wp-block-search__button-outside .wp-block-search__button, .wp-block-search.wp-block-search__no-button .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__button, .wp-block-search.wp-block-search__button-inside .wp-block-search__inside-wrapper'
+		)
 	),
 	'separator' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
@@ -8051,7 +8051,8 @@ return array(
 		),
 		'usesContext' => array(
 			'core/tabs-activeTabIndex',
-			'core/tabs-editorActiveTabIndex'
+			'core/tabs-editorActiveTabIndex',
+			'core/tabs-id'
 		),
 		'supports' => array(
 			'anchor' => true,
@@ -8622,8 +8623,7 @@ return array(
 			)
 		),
 		'editorScript' => 'file:./index.js',
-		'editorStyle' => 'file:./editor.css',
-		'style' => 'file:./style-index.css'
+		'editorStyle' => 'file:./editor.css'
 	),
 	'tabs-menu-item' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
@@ -8645,12 +8645,6 @@ return array(
 			'core/tabs-menu-item-index',
 			'core/tabs-menu-item-id',
 			'core/tabs-menu-item-label'
-		),
-		'attributes' => array(
-			'anchor' => array(
-				'type' => 'string',
-				'default' => ''
-			)
 		),
 		'supports' => array(
 			'html' => false,
