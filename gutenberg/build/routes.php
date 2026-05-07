@@ -111,6 +111,44 @@ function gutenberg_register_options_connectors_wp_admin_page_routes() {
 }
 add_action( 'options-connectors-wp-admin_init', 'gutenberg_register_options_connectors_wp_admin_page_routes' );
 
+// Page-specific route registration functions for dashboard
+/**
+ * Register routes for dashboard page (full-page mode).
+ */
+function gutenberg_register_dashboard_page_routes() {
+	global $gutenberg_dashboard_routes_data;
+	gutenberg_register_page_routes( $gutenberg_dashboard_routes_data, 'gutenberg_register_dashboard_route' );
+}
+add_action( 'dashboard_init', 'gutenberg_register_dashboard_page_routes' );
+
+/**
+ * Register routes for dashboard page (wp-admin mode).
+ */
+function gutenberg_register_dashboard_wp_admin_page_routes() {
+	global $gutenberg_dashboard_routes_data;
+	gutenberg_register_page_routes( $gutenberg_dashboard_routes_data, 'gutenberg_register_dashboard_wp_admin_route' );
+}
+add_action( 'dashboard-wp-admin_init', 'gutenberg_register_dashboard_wp_admin_page_routes' );
+
+// Page-specific route registration functions for experiments
+/**
+ * Register routes for experiments page (full-page mode).
+ */
+function gutenberg_register_experiments_page_routes() {
+	global $gutenberg_experiments_routes_data;
+	gutenberg_register_page_routes( $gutenberg_experiments_routes_data, 'gutenberg_register_experiments_route' );
+}
+add_action( 'experiments_init', 'gutenberg_register_experiments_page_routes' );
+
+/**
+ * Register routes for experiments page (wp-admin mode).
+ */
+function gutenberg_register_experiments_wp_admin_page_routes() {
+	global $gutenberg_experiments_routes_data;
+	gutenberg_register_page_routes( $gutenberg_experiments_routes_data, 'gutenberg_register_experiments_wp_admin_route' );
+}
+add_action( 'experiments-wp-admin_init', 'gutenberg_register_experiments_wp_admin_page_routes' );
+
 // Page-specific route registration functions for font-library
 /**
  * Register routes for font-library page (full-page mode).
@@ -167,4 +205,23 @@ function gutenberg_register_site_editor_v2_wp_admin_page_routes() {
 	gutenberg_register_page_routes( $gutenberg_site_editor_v2_routes_data, 'gutenberg_register_site_editor_v2_wp_admin_route' );
 }
 add_action( 'site-editor-v2-wp-admin_init', 'gutenberg_register_site_editor_v2_wp_admin_page_routes' );
+
+// Page-specific route registration functions for taxonomies
+/**
+ * Register routes for taxonomies page (full-page mode).
+ */
+function gutenberg_register_taxonomies_page_routes() {
+	global $gutenberg_taxonomies_routes_data;
+	gutenberg_register_page_routes( $gutenberg_taxonomies_routes_data, 'gutenberg_register_taxonomies_route' );
+}
+add_action( 'taxonomies_init', 'gutenberg_register_taxonomies_page_routes' );
+
+/**
+ * Register routes for taxonomies page (wp-admin mode).
+ */
+function gutenberg_register_taxonomies_wp_admin_page_routes() {
+	global $gutenberg_taxonomies_routes_data;
+	gutenberg_register_page_routes( $gutenberg_taxonomies_routes_data, 'gutenberg_register_taxonomies_wp_admin_route' );
+}
+add_action( 'taxonomies-wp-admin_init', 'gutenberg_register_taxonomies_wp_admin_page_routes' );
 

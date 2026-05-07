@@ -226,6 +226,7 @@ return array(
 					'top',
 					'bottom'
 				),
+				'padding' => true,
 				'blockGap' => true
 			),
 			'__experimentalBorder' => array(
@@ -2665,7 +2666,7 @@ return array(
 		'__experimental' => true,
 		'name' => 'core/form',
 		'title' => 'Form',
-		'category' => 'common',
+		'category' => 'widgets',
 		'allowedBlocks' => array(
 			'core/paragraph',
 			'core/heading',
@@ -2735,7 +2736,7 @@ return array(
 		'__experimental' => true,
 		'name' => 'core/form-input',
 		'title' => 'Input Field',
-		'category' => 'common',
+		'category' => 'widgets',
 		'ancestor' => array(
 			'core/form'
 		),
@@ -2817,7 +2818,7 @@ return array(
 		'__experimental' => true,
 		'name' => 'core/form-submission-notification',
 		'title' => 'Form Submission Notification',
-		'category' => 'common',
+		'category' => 'widgets',
 		'ancestor' => array(
 			'core/form'
 		),
@@ -2843,7 +2844,7 @@ return array(
 		'__experimental' => true,
 		'name' => 'core/form-submit-button',
 		'title' => 'Form Submit Button',
-		'category' => 'common',
+		'category' => 'widgets',
 		'icon' => 'button',
 		'ancestor' => array(
 			'core/form'
@@ -3162,7 +3163,8 @@ return array(
 				)
 			),
 			'dimensions' => array(
-				'minHeight' => true
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'__experimentalBorder' => array(
 				'color' => true,
@@ -6535,10 +6537,7 @@ return array(
 				)
 			),
 			'dimensions' => array(
-				'minHeight' => true,
-				'__experimentalDefaultControls' => array(
-					'minHeight' => false
-				)
+				'minHeight' => true
 			),
 			'spacing' => array(
 				'margin' => true,
@@ -8036,8 +8035,140 @@ return array(
 		'apiVersion' => 3,
 		'name' => 'core/tab',
 		'title' => 'Tab',
+		'description' => 'A single tab button in the tab list.',
+		'category' => 'design',
+		'textdomain' => 'default',
+		'parent' => array(
+			'core/tab-list'
+		),
+		'usesContext' => array(
+			'core/tabs-list',
+			'core/tabs-activeTabIndex',
+			'core/tabs-editorActiveTabIndex',
+			'core/tab-index',
+			'core/tab-id',
+			'core/tab-label'
+		),
+		'supports' => array(
+			'html' => false,
+			'reusable' => false,
+			'visibility' => false,
+			'lock' => false,
+			'color' => array(
+				'background' => true,
+				'text' => true,
+				'__experimentalDefaultControls' => array(
+					'background' => true,
+					'text' => true
+				)
+			),
+			'typography' => array(
+				'fontSize' => true,
+				'__experimentalFontFamily' => true,
+				'textAlign' => true,
+				'__experimentalDefaultControls' => array(
+					'fontSize' => true
+				)
+			),
+			'spacing' => array(
+				'padding' => true,
+				'__experimentalDefaultControls' => array(
+					'padding' => true
+				)
+			),
+			'__experimentalBorder' => array(
+				'radius' => true,
+				'color' => true,
+				'width' => true,
+				'style' => true
+			)
+		),
+		'editorScript' => 'file:./index.js',
+		'editorStyle' => 'file:./editor.css',
+		'style' => 'file:./style-index.css'
+	),
+	'tab-list' => array(
+		'$schema' => 'https://schemas.wp.org/trunk/block.json',
+		'__experimental' => true,
+		'apiVersion' => 3,
+		'name' => 'core/tab-list',
+		'title' => 'Tab List',
+		'description' => 'Display the tab buttons for a tabbed interface.',
+		'category' => 'design',
+		'textdomain' => 'default',
+		'parent' => array(
+			'core/tabs'
+		),
+		'allowedBlocks' => array(
+			'core/tab'
+		),
+		'usesContext' => array(
+			'core/tabs-list'
+		),
+		'attributes' => array(
+			
+		),
+		'supports' => array(
+			'html' => false,
+			'reusable' => false,
+			'visibility' => false,
+			'lock' => false,
+			'dimensions' => array(
+				'aspectRatio' => false,
+				'height' => false,
+				'minHeight' => false,
+				'width' => false
+			),
+			'color' => array(
+				'background' => true,
+				'text' => true,
+				'__experimentalDefaultControls' => array(
+					'background' => true,
+					'text' => true
+				)
+			),
+			'typography' => array(
+				'fontSize' => true,
+				'__experimentalFontFamily' => true
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true
+			),
+			'layout' => array(
+				'default' => array(
+					'type' => 'flex',
+					'flexWrap' => 'nowrap',
+					'orientation' => 'horizontal'
+				),
+				'allowSwitching' => false,
+				'allowVerticalAlignment' => true,
+				'allowJustification' => true,
+				'allowOrientation' => true
+			),
+			'spacing' => array(
+				'padding' => true,
+				'margin' => true,
+				'blockGap' => true,
+				'__experimentalDefaultControls' => array(
+					'padding' => true,
+					'margin' => true,
+					'blockGap' => true
+				)
+			)
+		),
+		'editorScript' => 'file:./index.js',
+		'editorStyle' => 'file:./editor.css'
+	),
+	'tab-panel' => array(
+		'$schema' => 'https://schemas.wp.org/trunk/block.json',
+		'__experimental' => true,
+		'apiVersion' => 3,
+		'name' => 'core/tab-panel',
+		'title' => 'Tab Panel',
 		'description' => 'Content for a tab in a tabbed interface.',
-		'version' => '1.0.0',
 		'category' => 'design',
 		'textdomain' => 'default',
 		'attributes' => array(
@@ -8047,7 +8178,7 @@ return array(
 			)
 		),
 		'parent' => array(
-			'core/tab-panel'
+			'core/tab-panels'
 		),
 		'usesContext' => array(
 			'core/tabs-activeTabIndex',
@@ -8080,7 +8211,8 @@ return array(
 					'__experimentalFontFamily' => true
 				)
 			),
-			'renaming' => true
+			'renaming' => true,
+			'visibility' => false
 		),
 		'providesContext' => array(
 			'core/tab-label' => 'label'
@@ -8088,21 +8220,20 @@ return array(
 		'editorScript' => 'file:./index.js',
 		'style' => 'file:./style-index.css'
 	),
-	'tab-panel' => array(
+	'tab-panels' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
 		'__experimental' => true,
 		'apiVersion' => 3,
-		'name' => 'core/tab-panel',
-		'title' => 'Tab Panel',
+		'name' => 'core/tab-panels',
+		'title' => 'Tab Panels',
 		'description' => 'Container for tab panel content in a tabbed interface.',
-		'version' => '1.0.0',
 		'category' => 'design',
 		'textdomain' => 'default',
 		'parent' => array(
 			'core/tabs'
 		),
 		'allowedBlocks' => array(
-			'core/tab'
+			'core/tab-panel'
 		),
 		'attributes' => array(
 			
@@ -8111,6 +8242,7 @@ return array(
 			'anchor' => false,
 			'html' => false,
 			'reusable' => false,
+			'visibility' => false,
 			'lock' => false,
 			'dimensions' => array(
 				'aspectRatio' => false,
@@ -8482,12 +8614,11 @@ return array(
 		'name' => 'core/tabs',
 		'title' => 'Tabs',
 		'description' => 'Display content in a tabbed interface to help users navigate detailed content with ease.',
-		'version' => '1.0.0',
 		'category' => 'design',
 		'textdomain' => 'default',
 		'allowedBlocks' => array(
-			'core/tabs-menu',
-			'core/tab-panel'
+			'core/tab-list',
+			'core/tab-panels'
 		),
 		'attributes' => array(
 			'activeTabIndex' => array(
@@ -8549,142 +8680,6 @@ return array(
 		'editorStyle' => 'file:./index.css',
 		'style' => 'file:./style-index.css',
 		'viewScriptModule' => '@wordpress/block-library/tabs/view'
-	),
-	'tabs-menu' => array(
-		'$schema' => 'https://schemas.wp.org/trunk/block.json',
-		'__experimental' => true,
-		'apiVersion' => 3,
-		'name' => 'core/tabs-menu',
-		'title' => 'Tabs Menu',
-		'description' => 'Display the tab buttons for a tabbed interface.',
-		'version' => '1.0.0',
-		'category' => 'design',
-		'textdomain' => 'default',
-		'parent' => array(
-			'core/tabs'
-		),
-		'allowedBlocks' => array(
-			'core/tabs-menu-item'
-		),
-		'usesContext' => array(
-			'core/tabs-list'
-		),
-		'attributes' => array(
-			
-		),
-		'supports' => array(
-			'html' => false,
-			'reusable' => false,
-			'lock' => false,
-			'dimensions' => array(
-				'aspectRatio' => false,
-				'height' => false,
-				'minHeight' => false,
-				'width' => false
-			),
-			'color' => array(
-				'background' => true,
-				'text' => true,
-				'__experimentalDefaultControls' => array(
-					'background' => true,
-					'text' => true
-				)
-			),
-			'typography' => array(
-				'fontSize' => true,
-				'__experimentalFontFamily' => true
-			),
-			'__experimentalBorder' => array(
-				'color' => true,
-				'radius' => true,
-				'style' => true,
-				'width' => true
-			),
-			'layout' => array(
-				'default' => array(
-					'type' => 'flex',
-					'flexWrap' => 'nowrap',
-					'orientation' => 'horizontal'
-				),
-				'allowSwitching' => false,
-				'allowVerticalAlignment' => true,
-				'allowJustification' => true,
-				'allowOrientation' => true
-			),
-			'spacing' => array(
-				'padding' => true,
-				'margin' => true,
-				'blockGap' => true,
-				'__experimentalDefaultControls' => array(
-					'padding' => true,
-					'margin' => true,
-					'blockGap' => true
-				)
-			)
-		),
-		'editorScript' => 'file:./index.js',
-		'editorStyle' => 'file:./editor.css'
-	),
-	'tabs-menu-item' => array(
-		'$schema' => 'https://schemas.wp.org/trunk/block.json',
-		'__experimental' => true,
-		'apiVersion' => 3,
-		'name' => 'core/tabs-menu-item',
-		'title' => 'Tab Menu Item',
-		'description' => 'A single tab button in the tabs menu.',
-		'version' => '1.0.0',
-		'category' => 'design',
-		'textdomain' => 'default',
-		'parent' => array(
-			'core/tabs-menu'
-		),
-		'usesContext' => array(
-			'core/tabs-list',
-			'core/tabs-activeTabIndex',
-			'core/tabs-editorActiveTabIndex',
-			'core/tabs-menu-item-index',
-			'core/tabs-menu-item-id',
-			'core/tabs-menu-item-label'
-		),
-		'supports' => array(
-			'html' => false,
-			'reusable' => false,
-			'lock' => false,
-			'color' => array(
-				'background' => true,
-				'text' => true,
-				'__experimentalDefaultControls' => array(
-					'background' => true,
-					'text' => true
-				)
-			),
-			'typography' => array(
-				'fontSize' => true,
-				'__experimentalFontFamily' => true,
-				'textAlign' => true,
-				'__experimentalDefaultControls' => array(
-					'fontSize' => true
-				)
-			),
-			'spacing' => array(
-				'padding' => true,
-				'__experimentalDefaultControls' => array(
-					'padding' => true
-				)
-			),
-			'__experimentalBorder' => array(
-				'radius' => true,
-				'color' => true,
-				'width' => true,
-				'style' => true
-			),
-			'layout' => array(
-				'allowEditing' => false
-			)
-		),
-		'editorScript' => 'file:./index.js',
-		'editorStyle' => 'file:./editor.css',
-		'style' => 'file:./style-index.css'
 	),
 	'tag-cloud' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
