@@ -122,6 +122,12 @@ function useStylesId({ templateId } = {}) {
       ) : null;
       return {
         globalStylesId: coreDataSelect.__experimentalGetCurrentGlobalStylesId(),
+        /*
+         * `styles_id` is not part of the template REST schema, so it
+         * cannot come from the record type. It is read defensively in
+         * case a filtered response carries one; without it the hook
+         * falls back to the global styles ID below.
+         */
         stylesId: template?.styles_id
       };
     },
@@ -645,10 +651,13 @@ function getResolvedValue(ruleValue, tree) {
   }
   const resolvedValue = getResolvedRefValue(ruleValue, tree);
   if (typeof resolvedValue === "object" && resolvedValue !== null && "url" in resolvedValue && resolvedValue?.url) {
-    resolvedValue.url = getResolvedThemeFilePath(
-      resolvedValue.url,
-      tree?._links?.["wp:theme-file"]
-    );
+    return {
+      ...resolvedValue,
+      url: getResolvedThemeFilePath(
+        resolvedValue.url,
+        tree?._links?.["wp:theme-file"]
+      )
+    };
   }
   return resolvedValue;
 }
@@ -2514,6 +2523,9 @@ var import_element = __toESM(require_element(), 1);
 function useUserGlobalStyles(id) {
   const { userGlobalStyles } = (0, import_data3.useSelect)(
     (select2) => {
+      if (id === void 0) {
+        return { userGlobalStyles: void 0 };
+      }
       const { getEntityRecord, getEditedEntityRecord, canUser } = select2(import_core_data2.store);
       const userCanEditGlobalStyles = canUser("update", {
         kind: "root",
@@ -2568,7 +2580,9 @@ var { unlock } = (0, import_private_apis.__dangerousOptInToUnstableAPIsOnlyForCo
 );
 
 // packages/lazy-editor/build-module/hooks/use-editor-settings.mjs
-function useEditorSettings({ stylesId }) {
+function useEditorSettings({
+  stylesId
+}) {
   const { editorSettings, blockTypes } = (0, import_data4.useSelect)(
     (select2) => ({
       editorSettings: unlock(
@@ -2970,7 +2984,7 @@ var import_block_editor = __toESM(require_block_editor(), 1);
 var import_editor2 = __toESM(require_editor(), 1);
 var import_blocks3 = __toESM(require_blocks(), 1);
 var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
-if (typeof document !== "undefined" && true && !document.head.querySelector("style[data-wp-hash='95327475c1']")) {
+if (typeof document !== "undefined" && (typeof process === "undefined" || true) && !document.head.querySelector("style[data-wp-hash='95327475c1']")) {
   const style = document.createElement("style");
   style.setAttribute("data-wp-hash", "95327475c1");
   style.appendChild(document.createTextNode(".lazy-editor-block-preview__container{align-items:center;border-radius:4px;display:flex;flex-direction:column;height:100%;justify-content:center}.dataviews-view-grid .lazy-editor-block-preview__container .block-editor-block-preview__container{height:100%}.dataviews-view-table .lazy-editor-block-preview__container{text-wrap:balance;text-wrap:pretty;flex-grow:0;width:96px}"));
