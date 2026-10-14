@@ -265,6 +265,7 @@ class WP_Theme_JSON_Gutenberg {
 		'background-repeat'                 => array( 'background', 'backgroundRepeat' ),
 		'background-size'                   => array( 'background', 'backgroundSize' ),
 		'background-attachment'             => array( 'background', 'backgroundAttachment' ),
+		'background-clip'                   => array( 'background', 'backgroundClip' ),
 		'border-radius'                     => array( 'border', 'radius' ),
 		'border-top-left-radius'            => array( 'border', 'radius', 'topLeft' ),
 		'border-top-right-radius'           => array( 'border', 'radius', 'topRight' ),
@@ -411,6 +412,7 @@ class WP_Theme_JSON_Gutenberg {
 		'appearanceTools'               => null,
 		'useRootPaddingAwareAlignments' => null,
 		'background'                    => array(
+			'backgroundClip'  => null,
 			'backgroundImage' => null,
 			'backgroundSize'  => null,
 			'gradient'        => null,
@@ -552,6 +554,7 @@ class WP_Theme_JSON_Gutenberg {
 	 */
 	const VALID_STYLES = array(
 		'background' => array(
+			'backgroundClip'       => null,
 			'backgroundImage'      => null,
 			'backgroundAttachment' => null,
 			'backgroundPosition'   => null,
@@ -1107,7 +1110,7 @@ class WP_Theme_JSON_Gutenberg {
 		// In addition to presets, spacingScale (which generates presets) is also keyed by origin.
 		$scale_path    = array( 'settings', 'spacing', 'spacingScale' );
 		$spacing_scale = _wp_array_get( $this->theme_json, $scale_path, null );
-		if ( null !== $spacing_scale ) {
+		if ( is_array( $spacing_scale ) ) {
 			// If the spacingScale is not already keyed by origin.
 			if ( empty( array_intersect( array_keys( $spacing_scale ), static::VALID_ORIGINS ) ) ) {
 				_wp_array_set( $this->theme_json, $scale_path, array( $origin => $spacing_scale ) );
@@ -1182,7 +1185,10 @@ class WP_Theme_JSON_Gutenberg {
 			foreach ( $registered_variations as $variation_name ) {
 				$block_level_data = $new_theme_json['styles']['blocks'][ $block_type ]['variations'][ $variation_name ] ?? array();
 				$top_level_data   = $variations[ $variation_name ] ?? array();
-				$merged_data      = array_replace_recursive( $top_level_data, $block_level_data );
+				if ( ! is_array( $block_level_data ) || ! is_array( $top_level_data ) ) {
+					continue;
+				}
+				$merged_data = array_replace_recursive( $top_level_data, $block_level_data );
 				if ( ! empty( $merged_data ) ) {
 					_wp_array_set( $new_theme_json, array( 'styles', 'blocks', $block_type, 'variations', $variation_name ), $merged_data );
 				}
@@ -1457,7 +1463,7 @@ class WP_Theme_JSON_Gutenberg {
 		if ( ! empty( $input['blockTypes'] ) && is_array( $input['blockTypes'] ) ) {
 			$variation_pseudo_selectors = array();
 			foreach ( $input['blockTypes'] as $variation_block_type ) {
-				if ( isset( static::VALID_BLOCK_PSEUDO_SELECTORS[ $variation_block_type ] ) ) {
+				if ( is_string( $variation_block_type ) && isset( static::VALID_BLOCK_PSEUDO_SELECTORS[ $variation_block_type ] ) ) {
 					$variation_pseudo_selectors = array_merge(
 						$variation_pseudo_selectors,
 						static::VALID_BLOCK_PSEUDO_SELECTORS[ $variation_block_type ]
@@ -2059,7 +2065,10 @@ class WP_Theme_JSON_Gutenberg {
 		// Load the custom CSS last so it has the highest specificity.
 		if ( in_array( 'custom-css', $types, true ) ) {
 			// Add the global styles root CSS.
-			$stylesheet .= _wp_array_get( $this->theme_json, array( 'styles', 'css' ) );
+			$root_css = $this->theme_json['styles']['css'] ?? '';
+			if ( is_string( $root_css ) ) {
+				$stylesheet .= $root_css;
+			}
 		}
 
 		return $stylesheet;
@@ -2077,7 +2086,7 @@ class WP_Theme_JSON_Gutenberg {
 	public static function process_blocks_custom_css( $css, $selector ) {
 		$processed_css = '';
 
-		if ( empty( $css ) ) {
+		if ( empty( $css ) || ! is_string( $css ) ) {
 			return $processed_css;
 		}
 
@@ -3185,6 +3194,34 @@ class WP_Theme_JSON_Gutenberg {
 				'name'  => $css_property,
 				'value' => $value,
 			);
+
+			/*
+			 * When background-clip is set, add vendor-prefixed properties for
+			 * cross-browser support. For 'text', this clips the background to
+			 * the text and makes it visible via transparent fill. For box-model
+			 * values, only the fill color is reset, to cancel any inherited
+			 * text gradient. `-webkit-background-clip` is an alias of
+			 * `background-clip` in Chromium, so resetting it there would
+			 * discard the value set above. Values outside the set the style
+			 * engine accepts get neither, so a typo cannot reset the fill color.
+			 */
+			if ( 'background-clip' === $css_property ) {
+				if ( 'text' === $value ) {
+					$declarations[] = array(
+						'name'  => '-webkit-background-clip',
+						'value' => 'text',
+					);
+					$declarations[] = array(
+						'name'  => '-webkit-text-fill-color',
+						'value' => 'transparent',
+					);
+				} elseif ( in_array( $value, array( 'border-box', 'padding-box', 'content-box' ), true ) ) {
+					$declarations[] = array(
+						'name'  => '-webkit-text-fill-color',
+						'value' => 'currentColor',
+					);
+				}
+			}
 		}
 
 		// If a variable value is added to the root, the corresponding property should be removed.
@@ -3229,7 +3266,7 @@ class WP_Theme_JSON_Gutenberg {
 		 * to a path, this converts that path into the value at that path.
 		 * For example: { "ref": "style.color.background" } => "#fff".
 		 */
-		if ( is_array( $value ) && isset( $value['ref'] ) ) {
+		if ( is_array( $value ) && isset( $value['ref'] ) && is_string( $value['ref'] ) ) {
 			$value_path = explode( '.', $value['ref'] );
 			$ref_value  = _wp_array_get( $theme_json, $value_path, null );
 			// Background Image refs can refer to a string or an array containing a URL string.
@@ -5540,6 +5577,7 @@ class WP_Theme_JSON_Gutenberg {
 			! isset( $spacing_scale['mediumStep'] ) ||
 			! is_numeric( $spacing_scale['mediumStep'] ) ||
 			! isset( $spacing_scale['unit'] ) ||
+			! is_string( $spacing_scale['unit'] ) ||
 			! isset( $spacing_scale['operator'] ) ||
 			( '+' !== $spacing_scale['operator'] && '*' !== $spacing_scale['operator'] ) ||
 			! isset( $spacing_scale['increment'] ) ||

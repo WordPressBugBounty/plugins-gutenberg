@@ -154,6 +154,7 @@ return array(
 					'letterSpacing'
 				),
 				'fontSize' => true,
+				'lineHeight' => true,
 				'__experimentalFontFamily' => true,
 				'__experimentalFontWeight' => true,
 				'__experimentalFontStyle' => true,
@@ -416,6 +417,9 @@ return array(
 					'gradient' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true
+			),
 			'html' => false,
 			'spacing' => array(
 				'margin' => true,
@@ -593,12 +597,16 @@ return array(
 			'filter' => array(
 				'duotone' => true
 			),
+			'shadow' => array(
+				'__experimentalSkipSerialization' => true
+			),
 			'interactivity' => array(
 				'clientNavigation' => true
 			)
 		),
 		'selectors' => array(
 			'border' => '.wp-block-avatar img',
+			'shadow' => '.wp-block-avatar img',
 			'filter' => array(
 				'duotone' => '.wp-block-avatar img'
 			)
@@ -810,6 +818,12 @@ return array(
 			'splitting' => true,
 			'align' => false,
 			'alignWide' => false,
+			'background' => array(
+				'backgroundImage' => true,
+				'backgroundSize' => true,
+				'gradient' => true,
+				'__experimentalSkipSerialization' => true
+			),
 			'color' => array(
 				'__experimentalSkipSerialization' => true,
 				'gradients' => true,
@@ -973,6 +987,10 @@ return array(
 					'fontSize' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
@@ -996,7 +1014,8 @@ return array(
 				'clientNavigation' => true
 			),
 			'listView' => true,
-			'contentRole' => true
+			'contentRole' => true,
+			'shadow' => true
 		),
 		'editorStyle' => 'wp-block-buttons-editor',
 		'style' => 'wp-block-buttons'
@@ -1197,6 +1216,10 @@ return array(
 					'backgroundImage' => true,
 					'gradient' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -1401,6 +1424,10 @@ return array(
 					'backgroundImage' => true,
 					'gradient' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'spacing' => array(
 				'blockGap' => array(
@@ -2048,6 +2075,11 @@ return array(
 					'type' => 'flex'
 				)
 			),
+			'spacing' => array(
+				'padding' => true,
+				'margin' => true,
+				'blockGap' => true
+			),
 			'typography' => array(
 				'fontSize' => true,
 				'lineHeight' => true,
@@ -2060,6 +2092,12 @@ return array(
 				'__experimentalDefaultControls' => array(
 					'fontSize' => true
 				)
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true
 			),
 			'interactivity' => array(
 				'clientNavigation' => true
@@ -2477,7 +2515,8 @@ return array(
 				'allowJustification' => false
 			),
 			'interactivity' => array(
-				'clientNavigation' => true
+				'clientNavigation' => true,
+				'interactive' => true
 			),
 			'filter' => array(
 				'duotone' => true
@@ -2568,6 +2607,9 @@ return array(
 					'padding' => false
 				)
 			),
+			'dimensions' => array(
+				'minWidth' => true
+			),
 			'typography' => array(
 				'fontSize' => true,
 				'lineHeight' => true,
@@ -2637,8 +2679,13 @@ return array(
 		'supports' => array(
 			'anchor' => true,
 			'align' => true,
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
-				'margin' => true
+				'margin' => true,
+				'padding' => true
 			),
 			'interactivity' => array(
 				'clientNavigation' => true
@@ -2731,6 +2778,10 @@ return array(
 				'margin' => true,
 				'padding' => true
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'color' => array(
 				'gradients' => true,
 				'link' => true,
@@ -2752,6 +2803,7 @@ return array(
 					'style' => true
 				)
 			),
+			'shadow' => true,
 			'interactivity' => true
 		),
 		'editorStyle' => 'wp-block-file-editor',
@@ -2816,6 +2868,10 @@ return array(
 					'margin' => false,
 					'padding' => false
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -3058,6 +3114,11 @@ return array(
 				'background' => true,
 				'gradients' => true
 			),
+			'shadow' => true,
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'layout' => array(
 				'allowSwitching' => false,
 				'allowInheriting' => false,
@@ -3071,10 +3132,18 @@ return array(
 					'type' => 'flex'
 				)
 			),
+			'filter' => array(
+				'duotone' => true
+			),
 			'interactivity' => array(
 				'clientNavigation' => true
 			),
 			'listView' => true
+		),
+		'selectors' => array(
+			'filter' => array(
+				'duotone' => '.wp-block-gallery :where(img)'
+			)
 		),
 		'editorStyle' => 'wp-block-gallery-editor',
 		'style' => 'wp-block-gallery'
@@ -3261,6 +3330,10 @@ return array(
 					'text' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'shadow' => true,
 			'spacing' => array(
 				'margin' => true,
@@ -3274,6 +3347,7 @@ return array(
 				'fontSize' => true,
 				'lineHeight' => true,
 				'textAlign' => true,
+				'textIndent' => true,
 				'__experimentalFontFamily' => true,
 				'__experimentalFontStyle' => true,
 				'__experimentalFontWeight' => true,
@@ -3352,6 +3426,10 @@ return array(
 				)
 			),
 			'shadow' => true,
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
@@ -3362,6 +3440,14 @@ return array(
 					'radius' => false,
 					'style' => false,
 					'width' => false
+				)
+			),
+			'spacing' => array(
+				'margin' => true,
+				'padding' => true,
+				'__experimentalDefaultControls' => array(
+					'margin' => false,
+					'padding' => false
 				)
 			),
 			'interactivity' => array(
@@ -3727,10 +3813,20 @@ return array(
 					'link' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'html' => false,
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true
 			),
 			'shadow' => true,
 			'typography' => array(
@@ -3857,6 +3953,10 @@ return array(
 					'link' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true,
@@ -3969,6 +4069,15 @@ return array(
 					'fontSize' => true
 				)
 			),
+			'background' => array(
+				'backgroundImage' => true,
+				'backgroundSize' => true,
+				'gradient' => true,
+				'__experimentalDefaultControls' => array(
+					'backgroundImage' => true,
+					'gradient' => true
+				)
+			),
 			'color' => array(
 				'gradients' => true,
 				'link' => true,
@@ -3985,6 +4094,7 @@ return array(
 					'padding' => false
 				)
 			),
+			'shadow' => true,
 			'__unstablePasteTextInline' => true,
 			'__experimentalOnMerge' => true,
 			'__experimentalSlashInserter' => true,
@@ -3994,7 +4104,8 @@ return array(
 			'listView' => true
 		),
 		'selectors' => array(
-			'border' => '.wp-block-list:not(.wp-block-list .wp-block-list)'
+			'border' => '.wp-block-list:not(.wp-block-list .wp-block-list)',
+			'shadow' => '.wp-block-list:not(.wp-block-list .wp-block-list)'
 		),
 		'editorStyle' => 'wp-block-list-editor',
 		'style' => 'wp-block-list'
@@ -4029,6 +4140,11 @@ return array(
 			'html' => false,
 			'className' => false,
 			'splitting' => true,
+			'background' => array(
+				'backgroundImage' => true,
+				'backgroundSize' => true,
+				'gradient' => true
+			),
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
@@ -4051,6 +4167,7 @@ return array(
 					'padding' => false
 				)
 			),
+			'shadow' => true,
 			'typography' => array(
 				'fontSize' => true,
 				'lineHeight' => true,
@@ -4070,7 +4187,8 @@ return array(
 		),
 		'selectors' => array(
 			'root' => '.wp-block-list > li',
-			'border' => '.wp-block-list:not(.wp-block-list .wp-block-list) > li'
+			'border' => '.wp-block-list:not(.wp-block-list .wp-block-list) > li',
+			'shadow' => '.wp-block-list:not(.wp-block-list .wp-block-list) > li'
 		)
 	),
 	'loginout' => array(
@@ -4116,6 +4234,10 @@ return array(
 				'text' => false,
 				'gradients' => true,
 				'link' => true
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'spacing' => array(
 				'margin' => true,
@@ -4189,6 +4311,10 @@ return array(
 					'background' => true,
 					'text' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'shadow' => true,
 			'spacing' => array(
@@ -4334,6 +4460,11 @@ return array(
 				'full'
 			),
 			'html' => false,
+			'background' => array(
+				'backgroundImage' => true,
+				'backgroundSize' => true,
+				'gradient' => true
+			),
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
@@ -4356,10 +4487,15 @@ return array(
 					'text' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true
 			),
+			'shadow' => true,
 			'typography' => array(
 				'fontSize' => true,
 				'lineHeight' => true,
@@ -4373,10 +4509,18 @@ return array(
 					'fontSize' => true
 				)
 			),
+			'filter' => array(
+				'duotone' => true
+			),
 			'interactivity' => array(
 				'clientNavigation' => true
 			),
 			'allowedBlocks' => true
+		),
+		'selectors' => array(
+			'filter' => array(
+				'duotone' => '.wp-block-media-text > .wp-block-media-text__media img, .wp-block-media-text > .wp-block-media-text__media video'
+			)
 		),
 		'editorStyle' => 'wp-block-media-text-editor',
 		'style' => 'wp-block-media-text'
@@ -5013,6 +5157,10 @@ return array(
 				)
 			),
 			'shadow' => true,
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'contentRole' => true
 		),
 		'editorStyle' => 'wp-block-page-list-editor',
@@ -5128,6 +5276,7 @@ return array(
 				'style' => true,
 				'width' => true
 			),
+			'shadow' => true,
 			'color' => array(
 				'gradients' => true,
 				'link' => true,
@@ -5523,6 +5672,7 @@ return array(
 				'lineHeight' => true,
 				'textAlign' => true,
 				'textColumns' => true,
+				'textIndent' => true,
 				'__experimentalFontFamily' => true,
 				'__experimentalFontWeight' => true,
 				'__experimentalFontStyle' => true,
@@ -5755,6 +5905,10 @@ return array(
 					'text' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true
@@ -5763,6 +5917,7 @@ return array(
 				'fontSize' => true,
 				'lineHeight' => true,
 				'textAlign' => true,
+				'__experimentalFontFamily' => true,
 				'__experimentalFontStyle' => true,
 				'__experimentalFontWeight' => true,
 				'__experimentalLetterSpacing' => true,
@@ -5901,7 +6056,8 @@ return array(
 				)
 			),
 			'dimensions' => array(
-				'minHeight' => true
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'shadow' => true,
 			'spacing' => array(
@@ -6088,6 +6244,10 @@ return array(
 				'margin' => true,
 				'padding' => true
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'typography' => array(
 				'fontSize' => true,
 				'lineHeight' => true,
@@ -6208,6 +6368,7 @@ return array(
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
+				'style' => true,
 				'width' => true,
 				'__experimentalSkipSerialization' => true,
 				'__experimentalDefaultControls' => array(
@@ -6476,6 +6637,10 @@ return array(
 					'link' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'shadow' => true,
 			'spacing' => array(
 				'margin' => true,
@@ -6552,6 +6717,10 @@ return array(
 					'background' => true,
 					'text' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'html' => false,
 			'shadow' => true,
@@ -6657,6 +6826,10 @@ return array(
 					'link' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'shadow' => true,
 			'spacing' => array(
 				'margin' => true,
@@ -6725,6 +6898,10 @@ return array(
 					'background' => true,
 					'text' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'shadow' => true,
 			'spacing' => array(
@@ -6811,7 +6988,8 @@ return array(
 				)
 			),
 			'dimensions' => array(
-				'minHeight' => true
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'shadow' => true,
 			'spacing' => array(
@@ -6970,6 +7148,10 @@ return array(
 				'heading' => true,
 				'button' => true
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'padding' => true,
 				'margin' => true,
@@ -7055,6 +7237,11 @@ return array(
 					'link' => true
 				)
 			),
+			'spacing' => array(
+				'padding' => true,
+				'margin' => true,
+				'blockGap' => true
+			),
 			'layout' => array(
 				'allowSwitching' => false,
 				'allowInheriting' => false,
@@ -7073,6 +7260,18 @@ return array(
 				'__experimentalLetterSpacing' => true,
 				'__experimentalDefaultControls' => array(
 					'fontSize' => true
+				)
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true,
+				'__experimentalDefaultControls' => array(
+					'color' => false,
+					'radius' => false,
+					'style' => false,
+					'width' => false
 				)
 			),
 			'interactivity' => array(
@@ -7373,6 +7572,10 @@ return array(
 				'margin' => true,
 				'padding' => true
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'color' => array(
 				'gradients' => true,
 				'__experimentalDefaultControls' => array(
@@ -7475,6 +7678,7 @@ return array(
 			),
 			'dimensions' => array(
 				'minHeight' => true,
+				'minWidth' => true,
 				'__experimentalDefaultControls' => array(
 					'minHeight' => false
 				)
@@ -7498,6 +7702,7 @@ return array(
 				'gradients' => true,
 				'heading' => true,
 				'link' => true,
+				'button' => true,
 				'__experimentalDefaultControls' => array(
 					'background' => true,
 					'text' => true
@@ -7578,6 +7783,10 @@ return array(
 					'textDecoration' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'margin' => array(
 					'top',
@@ -7591,6 +7800,7 @@ return array(
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
+				'style' => true,
 				'width' => true,
 				'__experimentalDefaultControls' => array(
 					'width' => true
@@ -7677,6 +7887,10 @@ return array(
 					'padding' => false,
 					'margin' => false
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'shadow' => true,
 			'background' => array(
@@ -7791,7 +8005,8 @@ return array(
 				)
 			),
 			'spacing' => array(
-				'margin' => true
+				'margin' => true,
+				'padding' => true
 			),
 			'html' => false
 		),
@@ -8033,6 +8248,10 @@ return array(
 				)
 			),
 			'contentRole' => true,
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true,
@@ -8130,6 +8349,10 @@ return array(
 					'text' => true,
 					'link' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'spacing' => array(
 				'padding' => true,
@@ -8331,6 +8554,7 @@ return array(
 					'style' => true
 				)
 			),
+			'shadow' => true,
 			'contentRole' => true,
 			'listView' => true
 		),
@@ -8465,10 +8689,14 @@ return array(
 					'padding' => true,
 					'blockGap' => true
 				)
+			),
+			'shadow' => array(
+				'__experimentalSkipSerialization' => true
 			)
 		),
 		'selectors' => array(
 			'border' => '.wp-block-tab-list button',
+			'shadow' => '.wp-block-tab-list button',
 			'color' => array(
 				'background' => '.wp-block-tab-list button',
 				'text' => '.wp-block-tab-list button'
@@ -8597,6 +8825,9 @@ return array(
 			'shadow' => true,
 			'spacing' => array(
 				'padding' => true
+			),
+			'dimensions' => array(
+				'minHeight' => true
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -8999,6 +9230,9 @@ return array(
 				'margin' => true,
 				'padding' => true
 			),
+			'dimensions' => array(
+				'minWidth' => true
+			),
 			'shadow' => true,
 			'typography' => array(
 				'fontSize' => true,
@@ -9187,7 +9421,12 @@ return array(
 			),
 			'shadow' => true,
 			'spacing' => array(
+				'margin' => true,
 				'padding' => true
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -9253,6 +9492,10 @@ return array(
 					'background' => true,
 					'text' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'spacing' => array(
 				'padding' => true,
@@ -9343,9 +9586,14 @@ return array(
 					'link' => true
 				)
 			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
+			),
 			'shadow' => true,
 			'spacing' => array(
-				'padding' => true
+				'padding' => true,
+				'margin' => true
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -9429,6 +9677,10 @@ return array(
 				'__experimentalDefaultControls' => array(
 					'fontSize' => true
 				)
+			),
+			'dimensions' => array(
+				'minHeight' => true,
+				'minWidth' => true
 			),
 			'spacing' => array(
 				'margin' => true,
@@ -9601,6 +9853,7 @@ return array(
 			),
 			'dimensions' => array(
 				'minHeight' => true,
+				'minWidth' => true,
 				'__experimentalDefaultControls' => array(
 					'minHeight' => false
 				)
@@ -9610,12 +9863,15 @@ return array(
 				'__experimentalFontFamily' => true,
 				'lineHeight' => true,
 				'textAlign' => true,
+				'textColumns' => true,
+				'textIndent' => true,
 				'__experimentalFontStyle' => true,
 				'__experimentalFontWeight' => true,
 				'__experimentalLetterSpacing' => true,
 				'__experimentalTextTransform' => true,
 				'__experimentalTextDecoration' => true,
 				'__experimentalWritingMode' => true,
+				'fitText' => true,
 				'__experimentalDefaultControls' => array(
 					'fontSize' => true
 				)
@@ -9739,6 +9995,9 @@ return array(
 		'supports' => array(
 			'anchor' => true,
 			'align' => true,
+			'filter' => array(
+				'duotone' => true
+			),
 			'spacing' => array(
 				'margin' => true,
 				'padding' => true,
@@ -9755,7 +10014,10 @@ return array(
 			)
 		),
 		'selectors' => array(
-			'shadow' => '.wp-block-video video'
+			'shadow' => '.wp-block-video video',
+			'filter' => array(
+				'duotone' => '.wp-block-video video'
+			)
 		),
 		'editorStyle' => 'wp-block-video-editor',
 		'style' => 'wp-block-video'
