@@ -1163,8 +1163,9 @@ const onDOMReady = (callback) => {
 };
 /**
 * Subscribes to changes in any signal accessed inside the callback, re-running
-* the callback whenever those signals change. The callback runs without an
-* ambient directive scope and the previous scope is restored afterwards.
+* the callback whenever those signals change. The callback and any cleanup it
+* returns run without an ambient directive scope; when either returns or
+* throws, the scope frame that was on top before it ran is on top again.
 *
 * @example
 * ```js
@@ -1179,14 +1180,10 @@ const onDOMReady = (callback) => {
 * @param callback The callback to execute when a dependency changes.
 * @return A cleanup function to stop watching.
 */
-const watch = (callback) => E(() => {
-	setScope();
-	try {
-		return callback();
-	} finally {
-		resetScope();
-	}
-});
+const watch = (callback) => E(() => runWithoutScope(() => {
+	const cleanup = callback();
+	return typeof cleanup === "function" ? () => runWithoutScope(cleanup) : cleanup;
+}));
 /**
 * Creates a Flusher object that can be used to flush computed values and notify listeners.
 *
@@ -1581,6 +1578,25 @@ const setScope = (scope) => {
 */
 const resetScope = () => {
 	scopeStack.pop();
+};
+/**
+* Runs a callback without inheriting an ambient directive scope.
+*
+* Installs an empty execution frame on top of the scope stack, runs the
+* callback, and removes that frame whether the callback returns or throws, as
+* `withScope()` does with the scope it captured. Errors thrown by the callback
+* are rethrown.
+*
+* @param fn Callback to execute without an ambient directive scope.
+* @return The callback's return value.
+*/
+const runWithoutScope = (fn) => {
+	setScope();
+	try {
+		return fn();
+	} finally {
+		resetScope();
+	}
 };
 const throwNotInScope = (method) => {
 	throw Error(`Cannot call \`${method}()\` when there is no scope. If you are using an async function, please consider using a generator instead. If you are using some sort of async callbacks, like \`setTimeout\`, please wrap the callback with \`withScope(callback)\`.`);
@@ -2130,8 +2146,129 @@ const populateServerData = (data) => {
 	});
 };
 
+// packages/interactivity/build-module/html.mjs
+/** Empty HTML accepted by HTML sinks, including under Trusted Types enforcement. */
+const emptyHTML = globalThis.trustedTypes?.emptyHTML ?? "";
+/** Void and text-only elements on which `data-wp-html` cannot own content. */
+const unsupportedHtmlElements = /* @__PURE__ */ new Set([
+	"area",
+	"base",
+	"basefont",
+	"bgsound",
+	"br",
+	"col",
+	"embed",
+	"frame",
+	"hr",
+	"img",
+	"input",
+	"keygen",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
+	"textarea",
+	"title",
+	"script",
+	"style",
+	"iframe",
+	"xmp",
+	"noembed",
+	"noframes"
+]);
+const trustedHtmlByToken = /* @__PURE__ */ new WeakMap();
+/**
+* Marks a string (or native `TrustedHTML`) as trusted so the `data-wp-html`
+* directive renders it as markup. Other values empty the bound element,
+* except pending values and the server's token representation, which keep
+* its content.
+*
+* This function never sanitizes or otherwise processes the HTML passed
+* here, the same responsibility you take on using `dangerouslySetInnerHTML`
+* in React. Treating untrusted input as trusted is an XSS risk: never pass
+* it raw, unescaped user input, and never pass it a `context` value
+* directly. `context` is for selecting *which* trusted markup to show; the
+* markup itself should come from `state`, computed by your own code from a
+* source it trusts.
+*
+* The returned token is opaque and identity-based, not content-based: it
+* carries no inspectable trace of the HTML it wraps. Adding it to
+* `data-wp-context`, spreading it into a new object, or serializing it as
+* JSON does not carry the "trusted" marker with it — only a `data-wp-html`
+* reference that resolves directly to the exact value this function
+* returned is ever rendered as HTML.
+*
+* This package creates no Trusted Types policy of its own. On a site that
+* enforces Trusted Types, pass a `TrustedHTML` value from the site's own
+* policy: `asDangerousHTML( policy.createHTML( markup ) )`. A rejected value
+* empties the element.
+*
+* "Trusted" here only means the `data-wp-html` directive will render it and
+* the Interactivity API won't process directives inside it. It's still live
+* browser HTML once rendered. Content that isn't safe to render as HTML
+* isn't made safe by this function.
+*
+* @param  html Raw HTML string, or a native `TrustedHTML` value from a
+*              site-provided Trusted Types policy, to render.
+*
+* @throws {TypeError} If `html` is neither a string nor a native `TrustedHTML`
+*                     value.
+*
+* @return An opaque token the `data-wp-html` directive recognizes as trusted HTML.
+*
+* @example
+* ```js
+* import { asDangerousHTML, store } from '@wordpress/interactivity';
+*
+* store( 'myPlugin', {
+* 	state: {
+* 		get description() {
+* 			return asDangerousHTML(
+* 				'<p>A <strong>formatted</strong> description.</p>'
+* 			);
+* 		},
+* 	},
+* } );
+* ```
+*/
+function asDangerousHTML(html) {
+	const { trustedTypes } = globalThis;
+	if (typeof html !== "string" && !trustedTypes?.isHTML(html)) throw new TypeError("asDangerousHTML() expects a string or a native TrustedHTML value.");
+	const token = Object.freeze(Object.create(null));
+	trustedHtmlByToken.set(token, html);
+	return token;
+}
+/**
+* Checks whether a value was produced by `asDangerousHTML()`.
+*
+* @param value Value to check.
+*
+* @return Whether the value is a trusted HTML token.
+*/
+function isDangerousHTML(value) {
+	return typeof value === "object" && value !== null && trustedHtmlByToken.has(value);
+}
+/**
+* Retrieves the HTML value a trusted HTML token represents.
+*
+* @param token A token previously returned by `asDangerousHTML()`.
+*
+* @return The HTML value the token represents.
+*/
+function getDangerousHTML(token) {
+	return trustedHtmlByToken.get(token);
+}
+
 // packages/interactivity/build-module/vdom.mjs
 init_preact_module();
+/** Associates opaque HTML props with script-free snapshots owned by the live document's template-contents document. */
+const htmlFallbacks = /* @__PURE__ */ new WeakMap();
+/** Opaque HTML props whose snapshot holds an element's server-rendered content, not `<template>` content. */
+const htmlServerContents = /* @__PURE__ */ new WeakSet();
+/** Number of `<template>` element contents being converted around the current conversion. */
+let templateContentDepth = 0;
 const directivePrefix = `data-wp-`;
 const namespaces = [];
 const currentNamespace = () => namespaces[namespaces.length - 1] ?? null;
@@ -2197,6 +2334,58 @@ function splitDirectiveName(directiveName) {
 }
 const nsPathRegExp = /^([\w_\/-]+)::(.+)$/;
 /**
+* Copies a node tree into the target's owner document, omitting script
+* elements recursively. HTML-namespace template contents are traversed
+* separately because they are not ordinary child nodes of their template
+* element; elements named `template` in other namespaces use their child nodes.
+*
+* @param source The node whose child nodes are copied.
+* @param target The fragment or cloned node that receives those children.
+*/
+function copyFallbackChildren(source, target) {
+	for (const child of Array.from(source.childNodes)) {
+		if (child.nodeType === 1 && child.localName === "script") continue;
+		const clone = target.ownerDocument.importNode(child, false);
+		target.appendChild(clone);
+		if (child.nodeType === 1 && child.namespaceURI === "http://www.w3.org/1999/xhtml" && child.localName === "template") copyFallbackChildren(child.content, clone.content);
+		else copyFallbackChildren(child, clone);
+	}
+}
+/**
+* Gets the inert template-contents document associated with the live document.
+*
+* @return The live document's shared template-contents owner document.
+*/
+function getTemplateContentsOwnerDocument() {
+	return document.createElement("template").content.ownerDocument;
+}
+/**
+* Reads the script-free fallback snapshot recorded for an element vnode. The
+* snapshot is owned by the live document's shared template-contents document.
+* Callers must leave it detached and unmodified; insert a clone.
+*
+* @param element The element vnode passed to a directive callback.
+* @return The detached fallback snapshot, or `undefined` when absent.
+*/
+function getHtmlFallback(element) {
+	const htmlProps = element.props.dangerouslySetInnerHTML;
+	return htmlProps && htmlFallbacks.get(htmlProps);
+}
+/**
+* Reads the script-free snapshot of an element's server-rendered content: the
+* snapshot that {@link getHtmlFallback} returns, when `toVdom()` built the
+* vnode from markup outside every `<template>` element's content. Callers must
+* leave it detached and unmodified; insert a clone.
+*
+* @param element The element vnode passed to a directive callback.
+* @return The detached snapshot, or `undefined` for a vnode built from
+*         `<template>` content or not built by `toVdom()`.
+*/
+function getHtmlServerContent(element) {
+	const htmlProps = element.props.dangerouslySetInnerHTML;
+	return htmlProps && htmlServerContents.has(htmlProps) ? htmlFallbacks.get(htmlProps) : void 0;
+}
+/**
 * Parses the namespace and value from a directive attribute value.
 *
 * JSON is retained only when it produces a plain object. All other values use
@@ -2229,13 +2418,57 @@ const directiveMaps = /* @__PURE__ */ new WeakSet();
 */
 const isDirectiveMap = (value) => typeof value === "object" && value !== null && directiveMaps.has(value);
 /**
+* Gets the namespace named by the parsed value of a `data-wp-interactive`
+* attribute: the value itself when it is a string, or the `namespace` string of
+* an object. It is the single place that interprets these values, so
+* {@link toVdom} and its callers resolve a `data-wp-interactive` attribute to
+* the same namespace.
+*
+* @param value The `value` returned by {@link parseDirectiveValue} for the
+*              attribute.
+* @return The namespace, or null when the value names none or a reserved key.
+*/
+const getInteractiveNamespace = (value) => {
+	const namespace = typeof value === "string" ? value : typeof value?.namespace === "string" ? value.namespace : null;
+	return isReservedKey(namespace) ? null : namespace;
+};
+/**
 * Recursive function that transforms a DOM tree into vDOM.
 * Directive attributes are interpreted with {@link parseDirectiveValue}.
+* Only supported `data-wp-html` entries on supported elements own opaque
+* content; ignored HTML bindings leave descendants under ordinary conversion.
 *
-* @param root The root element or node to start traversing on.
+* Unprefixed directives get the namespace of the nearest `data-wp-interactive`
+* at or above their element within `root`. Where there is none, the namespace
+* passed as `namespace` applies, as if `root` sat inside a
+* `data-wp-interactive` that names it; `null` stands for no namespace. When
+* `namespace` is omitted, the namespace in effect where the conversion is
+* requested applies: the enclosing conversion's for `<template>` content, and
+* `null` for a top-level call. The ancestors of `root` are never read. A
+* namespace prefix in a directive value always takes precedence.
+*
+* @example
+* ```js
+* // The directives of the region resolve against `my-plugin`, the namespace
+* // of the interactive element that contains it.
+* toVdom( region, 'my-plugin' );
+* ```
+*
+* @param root      The root element or node to start traversing on.
+* @param namespace Optional namespace for the unprefixed directives that no
+*                  `data-wp-interactive` within `root` governs.
 * @return The resulting vDOM tree.
 */
-function toVdom(root) {
+function toVdom(root, namespace) {
+	if (namespace === void 0) return convertToVdom(root);
+	namespaces.push(namespace);
+	try {
+		return convertToVdom(root);
+	} finally {
+		namespaces.pop();
+	}
+}
+function convertToVdom(root) {
 	const nodesToRemove = /* @__PURE__ */ new Set();
 	const nodesToReplace = /* @__PURE__ */ new Set();
 	const treeWalker = document.createTreeWalker(root, 205);
@@ -2265,8 +2498,7 @@ function toVdom(root) {
 				const { namespace, value } = parseDirectiveValue(attributeValue);
 				if (attributeName === "data-wp-interactive") {
 					island = true;
-					const islandNamespace = typeof value === "string" ? value : typeof value?.namespace === "string" ? value.namespace : null;
-					namespaces.push(isReservedKey(islandNamespace) ? null : islandNamespace);
+					namespaces.push(getInteractiveNamespace(value));
 				} else if (isReservedKey(namespace)) warn(`Found reserved namespace "${namespace}" in directive: ${attributeName}.`);
 				else directives.push([
 					attributeName,
@@ -2317,10 +2549,24 @@ function toVdom(root) {
 				delete props.__directives.html;
 			}
 		}
-		const hasDefaultHtmlDirective = props.__directives?.html?.some(({ suffix }) => suffix === null);
-		if (props.__directives?.["each-child"] || hasDefaultHtmlDirective) props.dangerouslySetInnerHTML = { __html: elementNode.innerHTML };
-		else if (localName === "template") props.content = [...elementNode.content.childNodes].map((childNode) => toVdom(childNode));
-		else {
+		const hasSupportedHtmlDirective = !unsupportedHtmlElements.has(localName) && props.__directives?.html?.some(({ suffix, uniqueId }) => suffix === null && uniqueId === null);
+		if (props.__directives?.["each-child"] || hasSupportedHtmlDirective) {
+			const htmlProps = { __html: elementNode.innerHTML };
+			props.dangerouslySetInnerHTML = htmlProps;
+			if (hasSupportedHtmlDirective) {
+				const snapshot = getTemplateContentsOwnerDocument().createDocumentFragment();
+				copyFallbackChildren(elementNode, snapshot);
+				htmlFallbacks.set(htmlProps, snapshot);
+				if (!templateContentDepth) htmlServerContents.add(htmlProps);
+			}
+		} else if (localName === "template") {
+			templateContentDepth++;
+			try {
+				props.content = [...elementNode.content.childNodes].map((childNode) => toVdom(childNode));
+			} finally {
+				templateContentDepth--;
+			}
+		} else {
 			let child = treeWalker.firstChild();
 			if (child) {
 				while (child) {
@@ -2551,11 +2797,14 @@ const Directives = ({ directives, priorityLevels: [currentPriorityLevel, ...next
 		evaluate: scope.evaluate
 	};
 	setScope(scope);
-	for (const directiveName of currentPriorityLevel) {
-		const wrapper = directiveCallbacks[directiveName]?.(directiveArgs);
-		if (wrapper !== void 0) props.children = wrapper;
+	try {
+		for (const directiveName of currentPriorityLevel) {
+			const wrapper = directiveCallbacks[directiveName]?.(directiveArgs);
+			if (wrapper !== void 0) props.children = wrapper;
+		}
+	} finally {
+		resetScope();
 	}
-	resetScope();
 	return props.children;
 };
 const old = l$4.vnode;
@@ -2913,92 +3162,6 @@ directive("each-child", ({ directives: { "each-child": eachChild }, element, eva
 	return evaluate(entry) === PENDING_GETTER ? element : null;
 }, { priority: 1 });
 
-// packages/interactivity/build-module/html.mjs
-/** Empty HTML accepted by HTML sinks, including under Trusted Types enforcement. */
-const emptyHTML = globalThis.trustedTypes?.emptyHTML ?? "";
-const trustedHtmlByToken = /* @__PURE__ */ new WeakMap();
-/**
-* Marks a string (or native `TrustedHTML`) as trusted so the `data-wp-html`
-* directive renders it as markup. Other values empty the bound element,
-* except pending values and the server's token representation, which keep
-* its content.
-*
-* This function never sanitizes or otherwise processes the HTML passed
-* here, the same responsibility you take on using `dangerouslySetInnerHTML`
-* in React. Treating untrusted input as trusted is an XSS risk: never pass
-* it raw, unescaped user input, and never pass it a `context` value
-* directly. `context` is for selecting *which* trusted markup to show; the
-* markup itself should come from `state`, computed by your own code from a
-* source it trusts.
-*
-* The returned token is opaque and identity-based, not content-based: it
-* carries no inspectable trace of the HTML it wraps. Adding it to
-* `data-wp-context`, spreading it into a new object, or serializing it as
-* JSON does not carry the "trusted" marker with it — only a `data-wp-html`
-* reference that resolves directly to the exact value this function
-* returned is ever rendered as HTML.
-*
-* This package creates no Trusted Types policy of its own. On a site that
-* enforces Trusted Types, pass a `TrustedHTML` value from the site's own
-* policy: `asDangerousHTML( policy.createHTML( markup ) )`. A rejected value
-* empties the element.
-*
-* "Trusted" here only means the `data-wp-html` directive will render it and
-* the Interactivity API won't process directives inside it. It's still live
-* browser HTML once rendered. Content that isn't safe to render as HTML
-* isn't made safe by this function.
-*
-* @param  html Raw HTML string, or a native `TrustedHTML` value from a
-*              site-provided Trusted Types policy, to render.
-*
-* @throws {TypeError} If `html` is neither a string nor a native `TrustedHTML`
-*                     value.
-*
-* @return An opaque token the `data-wp-html` directive recognizes as trusted HTML.
-*
-* @example
-* ```js
-* import { asDangerousHTML, store } from '@wordpress/interactivity';
-*
-* store( 'myPlugin', {
-* 	state: {
-* 		get description() {
-* 			return asDangerousHTML(
-* 				'<p>A <strong>formatted</strong> description.</p>'
-* 			);
-* 		},
-* 	},
-* } );
-* ```
-*/
-function asDangerousHTML(html) {
-	const { trustedTypes } = globalThis;
-	if (typeof html !== "string" && !trustedTypes?.isHTML(html)) throw new TypeError("asDangerousHTML() expects a string or a native TrustedHTML value.");
-	const token = Object.freeze(Object.create(null));
-	trustedHtmlByToken.set(token, html);
-	return token;
-}
-/**
-* Checks whether a value was produced by `asDangerousHTML()`.
-*
-* @param value Value to check.
-*
-* @return Whether the value is a trusted HTML token.
-*/
-function isDangerousHTML(value) {
-	return typeof value === "object" && value !== null && trustedHtmlByToken.has(value);
-}
-/**
-* Retrieves the HTML value a trusted HTML token represents.
-*
-* @param token A token previously returned by `asDangerousHTML()`.
-*
-* @return The HTML value the token represents.
-*/
-function getDangerousHTML(token) {
-	return trustedHtmlByToken.get(token);
-}
-
 // packages/interactivity/build-module/directives/html.mjs
 /**
 * Checks whether a value is `{ wpServerHtml: true }`, the server's
@@ -3009,45 +3172,122 @@ function getDangerousHTML(token) {
 * @return Whether the value is the server token representation.
 */
 const isServerHTMLRepresentation = (value) => isPlainObject(value) && value.wpServerHtml === true;
+/**
+* Lists the HTML-namespace `<template>` elements of a fragment, in tree order,
+* without those inside template contents.
+*
+* @param content The fragment to search.
+*
+* @return The template elements.
+*/
+const getTemplates = (content) => Array.from(content.querySelectorAll("template")).filter((template) => template.namespaceURI === "http://www.w3.org/1999/xhtml");
+/**
+* Checks whether two server content snapshots hold the same nodes: the same
+* names, attributes and data, in the same order, at every depth. Unlike
+* `isEqualNode()` alone, the contents of `<template>` elements are compared
+* too.
+*
+* @param content A detached snapshot.
+* @param other   Another detached snapshot.
+*
+* @return Whether the snapshots hold the same nodes.
+*/
+const isSameServerContent = (content, other) => {
+	if (!content.isEqualNode(other)) return false;
+	const otherTemplates = getTemplates(other);
+	return getTemplates(content).every((template, index) => isSameServerContent(template.content, otherTemplates[index].content));
+};
 directive("html", ({ directives: { html: htmlEntries }, element, evaluate }) => {
 	const entry = htmlEntries.find(isDefaultDirectiveSuffix);
-	const lastAppliedKey = A(void 0);
+	const supportedElement = !unsupportedHtmlElements.has(element.type);
+	const writeRecord = A(void 0);
+	const previousHost = A(null);
+	const previousInputs = A(null);
+	const previousServerContent = A(void 0);
+	const owedServerContent = A(void 0);
+	const shownServerContent = A(void 0);
 	const preactHtml = A();
 	let result;
 	if (!entry) warn("The usage of data-wp-html--suffix is not supported. Please use data-wp-html instead.");
 	else if (entry.uniqueId) warnUniqueIdNotSupported("html", entry.uniqueId);
+	else if (!supportedElement) warn(`The data-wp-html directive is not supported on <${element.type}> elements. Use an element that supports HTML content instead.`);
 	else try {
 		result = evaluate(entry);
 		if (typeof result === "function") result = result();
 	} catch {
 		result = void 0;
 	}
-	const active = !!entry && !entry.uniqueId;
+	const active = !!entry && !entry.uniqueId && supportedElement;
 	const serverHTMLRepresentation = isServerHTMLRepresentation(result);
 	const preserveContent = result === PENDING_GETTER || serverHTMLRepresentation;
 	const trusted = isDangerousHTML(result);
 	const resolvedValue = trusted ? getDangerousHTML(result) : emptyHTML;
+	const fallback = getHtmlFallback(element);
+	const serverContent = getHtmlServerContent(element);
 	useLayoutEffect(() => {
+		const node = element.ref.current;
+		const hostChanged = previousHost.current !== node;
+		const inputs = [
+			result,
+			active,
+			preserveContent,
+			serverHTMLRepresentation,
+			trusted,
+			resolvedValue,
+			element.ref
+		];
+		const inputsChanged = previousInputs.current === null || inputs.some((input, index) => input !== previousInputs.current[index]);
+		previousInputs.current = inputs;
+		if (hostChanged) {
+			previousHost.current = node;
+			writeRecord.current = void 0;
+			owedServerContent.current = void 0;
+			shownServerContent.current = preserveContent ? serverContent : void 0;
+			if (active && preserveContent && !node.hasChildNodes() && fallback?.hasChildNodes()) node.append(node.ownerDocument.importNode(fallback, true));
+		} else if (serverContent !== previousServerContent.current) {
+			owedServerContent.current = serverContent;
+			queueMicrotask(() => {
+				afterNextFrame(() => {
+					if (owedServerContent.current === serverContent) owedServerContent.current = void 0;
+				});
+			});
+		}
+		previousServerContent.current = serverContent;
 		if (!active) return;
-		if (preserveContent) {
-			if (serverHTMLRepresentation) lastAppliedKey.current = void 0;
+		const owed = owedServerContent.current;
+		if (preserveContent && owed) {
+			owedServerContent.current = void 0;
+			if (!shownServerContent.current || !isSameServerContent(shownServerContent.current, owed)) node.replaceChildren(node.ownerDocument.importNode(owed, true));
+			shownServerContent.current = owed;
+			writeRecord.current = void 0;
 			return;
 		}
+		if (!hostChanged && !inputsChanged) return;
+		if (preserveContent) {
+			if (serverHTMLRepresentation) writeRecord.current = void 0;
+			return;
+		}
+		shownServerContent.current = void 0;
 		if (!trusted && result !== null && result !== void 0) warn("data-wp-html: the value is not trusted HTML. Use asDangerousHTML() to explicitly trust the markup.");
 		const key = String(resolvedValue);
-		if (lastAppliedKey.current === key) return;
-		const node = element.ref.current;
-		if (lastAppliedKey.current === void 0 && node.innerHTML === key) {
-			lastAppliedKey.current = key;
+		const plainString = typeof resolvedValue === "string";
+		const record = writeRecord.current;
+		if (record && ("rejected" in record ? record.rejected === key && record.plainString === plainString : record.applied === key)) return;
+		if (!record && node.innerHTML === key) {
+			writeRecord.current = { applied: key };
 			return;
 		}
 		try {
 			node.innerHTML = resolvedValue;
+			writeRecord.current = { applied: key };
 		} catch (error) {
 			node.innerHTML = emptyHTML;
 			warn(`data-wp-html: the browser rejected this HTML value, so the element was emptied. ${error}`);
+			writeRecord.current = {
+				rejected: key,
+				plainString
+			};
 		}
-		lastAppliedKey.current = key;
 	}, [
 		result,
 		active,
@@ -3055,10 +3295,13 @@ directive("html", ({ directives: { html: htmlEntries }, element, evaluate }) => 
 		serverHTMLRepresentation,
 		trusted,
 		resolvedValue,
-		element.ref
+		fallback,
+		serverContent,
+		element.ref,
+		element
 	]);
 	if (active) {
-		preactHtml.current ??= preserveContent && element.props.dangerouslySetInnerHTML?.__html ? element.props.dangerouslySetInnerHTML : { __html: emptyHTML };
+		preactHtml.current ??= { __html: emptyHTML };
 		element.props.dangerouslySetInnerHTML = preactHtml.current;
 		element.props.children = void 0;
 	}
@@ -3693,6 +3936,12 @@ var init_debug_module = __esmMin((() => {
 init_preact_module();
 await Promise.resolve().then(() => (init_debug_module(), debug_module_exports));
 const requiredConsent = "I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.";
+/**
+* Returns the consent-gated private APIs used by internal consumers.
+*
+* @param lock Required acknowledgment of private API use.
+* @return The private interactivity APIs.
+*/
 const privateApis = (lock) => {
 	if (lock === requiredConsent) return {
 		getRegionRootFragment,
@@ -3700,6 +3949,7 @@ const privateApis = (lock) => {
 		toVdom,
 		parseDirectiveName,
 		parseDirectiveValue,
+		getInteractiveNamespace,
 		directive,
 		getNamespace,
 		h: k$1,
@@ -3715,7 +3965,9 @@ const privateApis = (lock) => {
 		sessionId,
 		warn,
 		afterNextFrame,
-		getScope
+		getScope,
+		/** Runs a callback without a directive scope and restores the caller's stack. */
+		runWithoutScope
 	};
 	throw new Error("Forbidden access.");
 };

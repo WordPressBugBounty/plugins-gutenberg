@@ -136,8 +136,7 @@ return array(
 				'__experimentalDefaultControls' => array(
 					'padding' => true
 				),
-				'__experimentalSkipSerialization' => true,
-				'__experimentalSelector' => '.wp-block-accordion-heading__toggle'
+				'__experimentalSkipSerialization' => true
 			),
 			'__experimentalBorder' => array(
 				'color' => true,
@@ -2433,12 +2432,6 @@ return array(
 			'focalPoint' => array(
 				'type' => 'object'
 			),
-			'minHeight' => array(
-				'type' => 'number'
-			),
-			'minHeightUnit' => array(
-				'type' => 'string'
-			),
 			'gradient' => array(
 				'type' => 'string'
 			),
@@ -2536,7 +2529,11 @@ return array(
 			),
 			'dimensions' => array(
 				'aspectRatio' => true,
-				'minWidth' => true
+				'minHeight' => true,
+				'minWidth' => true,
+				'__experimentalDefaultControls' => array(
+					'minHeight' => true
+				)
 			),
 			'typography' => array(
 				'fontSize' => true,
@@ -3790,6 +3787,7 @@ return array(
 			'__experimentalBorder' => array(
 				'color' => true,
 				'radius' => true,
+				'style' => true,
 				'width' => true,
 				'__experimentalSkipSerialization' => true,
 				'__experimentalDefaultControls' => array(
@@ -5405,7 +5403,6 @@ return array(
 					'fontSize' => true
 				)
 			),
-			'__experimentalSelector' => 'p',
 			'__unstablePasteTextInline' => true,
 			'interactivity' => array(
 				'clientNavigation' => true
@@ -7460,8 +7457,27 @@ return array(
 			),
 			'interactivity' => array(
 				'clientNavigation' => true
+			),
+			'spacing' => array(
+				'padding' => true,
+				'__experimentalDefaultControls' => array(
+					'padding' => false
+				)
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true,
+				'__experimentalDefaultControls' => array(
+					'color' => false,
+					'radius' => false,
+					'style' => false,
+					'width' => false
+				)
 			)
-		)
+		),
+		'style' => 'wp-block-query-pagination-next'
 	),
 	'query-pagination-numbers' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
@@ -7590,8 +7606,27 @@ return array(
 			),
 			'interactivity' => array(
 				'clientNavigation' => true
+			),
+			'spacing' => array(
+				'padding' => true,
+				'__experimentalDefaultControls' => array(
+					'padding' => false
+				)
+			),
+			'__experimentalBorder' => array(
+				'color' => true,
+				'radius' => true,
+				'style' => true,
+				'width' => true,
+				'__experimentalDefaultControls' => array(
+					'color' => false,
+					'radius' => false,
+					'style' => false,
+					'width' => false
+				)
 			)
-		)
+		),
+		'style' => 'wp-block-query-pagination-previous'
 	),
 	'query-title' => array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
@@ -7768,7 +7803,7 @@ return array(
 		'name' => 'core/quote',
 		'title' => 'Quote',
 		'category' => 'text',
-		'description' => 'Give quoted text visual emphasis. "In quoting others, we cite ourselves." — Julio Cortázar',
+		'description' => 'Give quoted text visual emphasis.',
 		'keywords' => array(
 			'blockquote',
 			'cite'
@@ -8132,7 +8167,6 @@ return array(
 			'interactivity' => true,
 			'typography' => array(
 				'__experimentalSkipSerialization' => true,
-				'__experimentalSelector' => '.wp-block-search__label, .wp-block-search__input, .wp-block-search__button',
 				'fontSize' => true,
 				'lineHeight' => true,
 				'__experimentalFontFamily' => true,
@@ -8178,7 +8212,10 @@ return array(
 			'background' => '.wp-block-search .wp-block-search__button, .wp-block-search.wp-block-search__no-button .wp-block-search__input',
 			'border' => '.wp-block-search.wp-block-search__button-outside .wp-block-search__input, .wp-block-search.wp-block-search__button-outside .wp-block-search__button, .wp-block-search.wp-block-search__no-button .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__button, .wp-block-search.wp-block-search__button-inside .wp-block-search__inside-wrapper',
 			'shadow' => '.wp-block-search.wp-block-search__button-outside .wp-block-search__input, .wp-block-search.wp-block-search__button-outside .wp-block-search__button, .wp-block-search.wp-block-search__no-button .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__input, .wp-block-search.wp-block-search__button-only .wp-block-search__button, .wp-block-search.wp-block-search__button-inside .wp-block-search__inside-wrapper',
-			'dimensions' => '.wp-block-search .wp-block-search__inside-wrapper'
+			'dimensions' => '.wp-block-search .wp-block-search__inside-wrapper',
+			'typography' => array(
+				'textDecoration' => '.wp-block-search .wp-block-search__label, .wp-block-search .wp-block-search__button'
+			)
 		)
 	),
 	'separator' => array(

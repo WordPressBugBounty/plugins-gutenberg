@@ -5,13 +5,42 @@ import { getConfig, privateApis, store } from "@wordpress/interactivity";
 const { parseDirectiveName } = privateApis("I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.");
 /** Prefix of attributes eligible for directive name parsing in `toVdom()`. */
 const directivePrefix = "data-wp-";
+/** Keep host eligibility aligned with `interactivity/src/html.ts`. */
+const unsupportedHtmlElements = /* @__PURE__ */ new Set([
+	"area",
+	"base",
+	"basefont",
+	"bgsound",
+	"br",
+	"col",
+	"embed",
+	"frame",
+	"hr",
+	"img",
+	"input",
+	"keygen",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
+	"textarea",
+	"title",
+	"script",
+	"style",
+	"iframe",
+	"xmp",
+	"noembed",
+	"noframes"
+]);
 /**
 * Finds the closest element, starting with `element` itself, whose content is
 * inert `data-wp-html` content.
 *
-* Inside an interactive region, this mirrors `toVdom()`: the element has a
-* `data-wp-html` entry without a suffix (as parsed by `parseDirectiveName()`;
-* a unique ID is allowed), and no `data-wp-text`, `data-wp-each` or
+* Inside an interactive region, this mirrors `toVdom()`: the host supports HTML
+* content, has a `data-wp-html` entry without a suffix or unique ID (as parsed
+* by `parseDirectiveName()`), and no `data-wp-text`, `data-wp-each` or
 * `data-wp-router-region` entry with any suffix or unique ID. Keep both in
 * sync; `test/html-directive-element.jsdom.test.ts` compares them.
 *
@@ -21,14 +50,15 @@ const directivePrefix = "data-wp-";
 function closestHtmlDirectiveElement(element) {
 	for (let current = element; current; current = current.parentElement) {
 		if (!current.closest("[data-wp-interactive]")) return null;
+		if (unsupportedHtmlElements.has(current.localName)) continue;
 		let hasDefaultHtmlDirective = false;
 		let hasConflict = false;
 		for (const { name } of current.attributes) {
 			if (!name[8] || !name.startsWith(directivePrefix)) continue;
 			const parsed = parseDirectiveName(name);
 			if (!parsed) continue;
-			const { prefix, suffix } = parsed;
-			if (prefix === "html" && suffix === null) hasDefaultHtmlDirective = true;
+			const { prefix, suffix, uniqueId } = parsed;
+			if (prefix === "html" && suffix === null && uniqueId === null) hasDefaultHtmlDirective = true;
 			if ([
 				"text",
 				"each",
@@ -2482,20 +2512,26 @@ const preloadScriptModules = (doc) => {
 const importScriptModules = (modules) => Promise.all(modules.map((m) => importPreloadedModule(m)));
 
 // packages/interactivity-router/build-module/index.mjs
-const { getRegionRootFragment, initialVdomPromise, toVdom, parseDirectiveValue, render, parseServerData, populateServerData, batch, routerRegions, h: createElement, navigationSignal, sessionId, warn, afterNextFrame, getScope } = privateApis("I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.");
+const { getRegionRootFragment, initialVdomPromise, toVdom, parseDirectiveValue, getInteractiveNamespace, render, parseServerData, populateServerData, batch, routerRegions, h: createElement, navigationSignal, sessionId, warn, afterNextFrame, getScope, runWithoutScope } = privateApis("I acknowledge that using private APIs means my theme or plugin will inevitably break in the next version of WordPress.");
 const regionAttr = `data-wp-router-region`;
 const interactiveAttr = `data-wp-interactive`;
-const regionsSelector = `[${interactiveAttr}][${regionAttr}], [${interactiveAttr}] [${interactiveAttr}][${regionAttr}]`;
+const regionsSelector = `[${interactiveAttr}][${regionAttr}], [${interactiveAttr}] [${regionAttr}]`;
 /**
 * Finds router regions outside `data-wp-html` content, in document order.
 *
-* The check starts at the region's parent, because `data-wp-router-region`
-* takes precedence over `data-wp-html` on the region itself. Regions nested in
-* other regions are kept, so `preparePage()` can handle them as part of their
-* parent's content.
+* A region is admitted when it carries `data-wp-interactive` itself or sits
+* inside an element that does; a region without its own `data-wp-interactive`
+* uses the namespace of its nearest interactive ancestor. Regions with neither
+* are never hydrated and are not discovered.
+*
+* The `data-wp-html` check starts at the region's parent, because
+* `data-wp-router-region` takes precedence over `data-wp-html` on the region
+* itself. Regions nested in other regions are kept, so `preparePage()` can
+* handle them as part of their parent's content.
 *
 * @param dom Document whose regions should be discovered.
-* @return Router region elements outside `data-wp-html` content.
+* @return Router region elements that carry or inherit a namespace, outside
+*         `data-wp-html` content.
 */
 const discoverRegions = (dom) => Array.from(dom.querySelectorAll(regionsSelector)).filter((region) => !closestHtmlDirectiveElement(region.parentElement));
 const pages = /* @__PURE__ */ new Map();
@@ -2532,6 +2568,22 @@ const parseRegionId = (value) => {
 	const { value: parsedValue } = parseDirectiveValue(value);
 	const id = typeof parsedValue === "string" ? parsedValue : parsedValue.id;
 	return typeof id === "string" && id ? id : null;
+};
+/**
+* Converts a top-level router region to vDOM.
+*
+* The region's unprefixed directives resolve against the namespace of its
+* nearest `data-wp-interactive` ancestor in the document that supplied it,
+* exactly as hydrating that document would resolve them. A
+* `data-wp-interactive` on the region or inside it takes precedence. A region
+* without such an ancestor is converted without a namespace.
+*
+* @param region Region element, in the document that supplies it.
+* @return The region's vDOM.
+*/
+const regionToVdom = (region) => {
+	const ancestor = region.parentElement?.closest(`[${interactiveAttr}]`);
+	return ancestor ? toVdom(region, getInteractiveNamespace(parseDirectiveValue(ancestor.getAttribute(interactiveAttr) ?? "").value)) : toVdom(region);
 };
 /**
 * Clones the content of the router region vDOM passed as argument.
@@ -2648,7 +2700,7 @@ const preparePage = async (url, dom, { vdom } = {}) => {
 	discoverRegions(dom).forEach((region) => {
 		const { id, attachTo } = parseRegionAttribute(region);
 		if (region.parentElement.closest(`[${regionAttr}]`)) regions[id] = void 0;
-		else regions[id] = vdom?.has(region) ? vdom.get(region) : toVdom(region);
+		else regions[id] = vdom?.has(region) ? vdom.get(region) : regionToVdom(region);
 		if (attachTo && !initialRegionsToAttach.has(id)) regionsToAttach[id] = attachTo;
 	});
 	const title = dom.querySelector("title")?.innerText;
@@ -2683,6 +2735,8 @@ const resolveAttachTarget = (selector) => {
 * and updating the document title. Pending attachments resolve against the live
 * document on every render, including history restores. A region without a
 * usable target is omitted from this render without altering the cached page.
+* Preact callbacks invoked while attaching regions run without a directive
+* scope.
 *
 * @param page The {@link Page} object to render.
 */
@@ -2722,7 +2776,7 @@ const renderPage = (page) => {
 				rootFragmentsByParent.set(parent, getRegionRootFragment(roots));
 			}
 			const fragment = rootFragmentsByParent.get(parent);
-			render(vdoms, fragment);
+			runWithoutScope(() => render(vdoms, fragment));
 		});
 	});
 	if (page.title) document.title = page.title;
@@ -2752,7 +2806,15 @@ const reloadAndDischarge = (token) => {
 		});
 	}
 };
+let entryChangeType = null;
+window.navigation?.addEventListener("currententrychange", (event) => {
+	entryChangeType = event.navigationType;
+});
 window.addEventListener("popstate", async () => {
+	if ((entryChangeType === "push" || entryChangeType === "replace") && currentNavigationId === navigateCallId && state.navigating) {
+		state.url = window.location.href;
+		return;
+	}
 	const pagePath = getPagePath(window.location.href);
 	const token = ++navigationId;
 	currentNavigationId = token;
@@ -2766,18 +2828,26 @@ window.addEventListener("popstate", async () => {
 	try {
 		if (state.initiator !== null && state.initiator !== void 0) state.initiator = null;
 		const page = await pages.get(pagePath);
+		if (currentNavigationId !== token) return;
 		if (!page) {
 			reloadAndDischarge(token);
 			return;
 		}
-		if (currentNavigationId === token) batch(() => {
+		batch(() => {
 			state.navigating = true;
 			state.initiator = null;
 		});
+		if (currentNavigationId !== token) return;
+		const { navigation } = privateState;
 		batch(() => {
 			state.url = window.location.href;
+			if (navigation.hasStarted) {
+				navigation.hasStarted = false;
+				navigation.hasFinished = true;
+			}
 			renderPage(page);
 		});
+		if (isLoadingAnnounced) a11ySpeak("loaded");
 		if (currentNavigationId === token) afterNextFrame(() => {
 			if (currentNavigationId === token) state.navigating = false;
 		});
@@ -2797,9 +2867,10 @@ window.document.querySelectorAll("script[type=module][src]").forEach(({ src }) =
 	const initialVdomMap = await initialVdomPromise;
 	pages.set(getPagePath(window.location.href), Promise.resolve(preparePage(getPagePath(window.location.href), document, { vdom: initialVdomMap })));
 })();
-let navigatingTo = "";
 let navigationId = 0;
 let currentNavigationId = 0;
+let navigateCallId = 0;
+let isLoadingAnnounced = false;
 let hasLoadedNavigationTextsData = false;
 const navigationTexts = {
 	loading: "Loading page, please wait.",
@@ -2861,6 +2932,11 @@ const { state, actions } = store("core/router", {
 		* needed, and updates any interactive regions whose contents have
 		* changed. It also creates a new entry in the browser session history.
 		*
+		* If another navigation (another call or a back/forward traversal)
+		* starts before this one renders its page, this one is abandoned: it
+		* doesn't render its page, change the session history or fall back to
+		* a full page load.
+		*
 		* @param href                               The page href.
 		* @param [options]                          Options object.
 		* @param [options.force]                    If true, it forces re-fetching the URL.
@@ -2871,7 +2947,7 @@ const { state, actions } = store("core/router", {
 		* @param [options.screenReaderAnnouncement] Whether a message for screen readers should be announced while navigating. Default to `true`.
 		* @param [options.initiator]                Who started the navigation. A nonempty string is used as is; `null` suppresses attribution silently; omitting it derives the value from the directive scope. An empty string or any other invalid value warns when `SCRIPT_DEBUG` is enabled, resolves to `null`, and never derives an initiator.
 		*
-		* @return  Promise that resolves once the navigation is completed or aborted.
+		* @return  Promise that resolves once the navigation is completed or abandoned.
 		*/
 		*navigate(href, options = {}) {
 			options = Object.assign(Object.create(null), options);
@@ -2881,19 +2957,19 @@ const { state, actions } = store("core/router", {
 			const pagePath = getPagePath(href);
 			const { navigation } = privateState;
 			const { loadingAnimation = true, screenReaderAnnouncement = true, timeout = 1e4 } = options;
-			navigatingTo = href;
 			actions.prefetch(pagePath, options);
 			const timeoutPromise = new Promise((resolve) => setTimeout(resolve, timeout));
+			const token = ++navigationId;
+			currentNavigationId = token;
+			navigateCallId = token;
 			const loadingTimeout = setTimeout(() => {
-				if (navigatingTo !== href) return;
+				if (currentNavigationId !== token) return;
 				if (loadingAnimation) {
 					navigation.hasStarted = true;
 					navigation.hasFinished = false;
 				}
 				if (screenReaderAnnouncement) a11ySpeak("loading");
 			}, 400);
-			const token = ++navigationId;
-			currentNavigationId = token;
 			try {
 				batch(() => {
 					state.navigating = true;
@@ -2901,19 +2977,20 @@ const { state, actions } = store("core/router", {
 				});
 				const page = yield Promise.race([pages.get(pagePath), timeoutPromise]);
 				clearTimeout(loadingTimeout);
-				if (navigatingTo !== href) return;
-				if (page && !page.initialData?.config?.["core/router"]?.clientNavigationDisabled) {
-					yield importScriptModules(page.scriptModules);
+				const canRenderPage = page && !page.initialData?.config?.["core/router"]?.clientNavigationDisabled;
+				if (canRenderPage && currentNavigationId === token) yield importScriptModules(page.scriptModules);
+				if (currentNavigationId !== token) return;
+				if (canRenderPage) {
 					batch(() => {
 						state.url = href;
-						if (loadingAnimation) {
+						if (loadingAnimation || navigation.hasStarted) {
 							navigation.hasStarted = false;
 							navigation.hasFinished = true;
 						}
 						renderPage(page);
 					});
 					window.history[options.replace ? "replaceState" : "pushState"]({ wpInteractivityId: sessionId }, "", href);
-					if (screenReaderAnnouncement) a11ySpeak("loaded");
+					if (screenReaderAnnouncement || isLoadingAnnounced) a11ySpeak("loaded");
 					const { hash } = new URL(href, window.location.href);
 					if (hash) document.querySelector(hash)?.scrollIntoView();
 				} else {
@@ -2957,10 +3034,12 @@ state.url = state.url || window.location.href;
 *
 * This is a wrapper around the `@wordpress/a11y` package's `speak` function. It handles importing
 * the package on demand and should be used instead of calling `a11y.speak` directly.
+* It also records whether the latest announcement is the loading message.
 *
 * @param messageKey The message to be announced by assistive technologies.
 */
 function a11ySpeak(messageKey) {
+	isLoadingAnnounced = messageKey === "loading";
 	if (!hasLoadedNavigationTextsData) {
 		hasLoadedNavigationTextsData = true;
 		const script = document.querySelector("script[id=\"wp-script-module-data-@wordpress/interactivity-router\"]");

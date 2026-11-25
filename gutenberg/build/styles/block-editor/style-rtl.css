@@ -1023,7 +1023,6 @@ iframe[name=editor-canvas] {
   .block-editor-block-mover__drag-handle {
     width: 24px;
     min-width: 0 !important;
-    overflow: hidden;
   }
   .block-editor-block-mover .block-editor-block-mover__drag-handle.has-icon.has-icon {
     padding-right: 0;
@@ -1049,6 +1048,13 @@ iframe[name=editor-canvas] {
     animation: components-button__appear-animation 0.1s ease;
     animation-fill-mode: forwards;
   }
+}
+.components-button.block-editor-block-mover-button:focus::before {
+  outline-offset: 0;
+}
+.components-button.block-editor-block-mover-button.has-icon.has-icon::before {
+  right: 2px;
+  left: 2px;
 }
 
 .block-editor-block-navigation__container {
@@ -1250,6 +1256,15 @@ iframe[name=editor-canvas] {
   text-align: center;
   padding-inline: 4px;
   margin-inline: -4px;
+}
+@media (forced-colors: active) {
+  .block-editor-block-styles__variants .block-editor-block-styles__item[aria-checked=true] {
+    forced-color-adjust: none;
+    outline-color: CanvasText;
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    border-color: ButtonBorder;
+  }
 }
 
 .components-popover.block-editor-block-switcher__popover .components-popover__content {
@@ -1746,7 +1761,7 @@ iframe[name=editor-canvas] {
 
 .block-editor-font-family-control__hint {
   margin-inline-start: var(--wpds-dimension-gap-sm, 8px);
-  color: var(--wpds-color-foreground-interactive-neutral-weak, #707070);
+  color: var(--wpds-color-foreground-interactive-neutral-weak, #6e6e6e);
 }
 
 .block-editor-global-styles__toggle-icon {
@@ -1774,17 +1789,6 @@ iframe[name=editor-canvas] {
 
 .block-editor-global-styles-state-control__badges {
   min-height: 24px;
-}
-
-.block-editor-global-styles-state-control__badge-infotip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: var(--wpds-border-radius-sm, 2px);
-  background: none;
-  color: var(--wpds-color-foreground-content-neutral-weak, #707070);
-  cursor: var(--wpds-cursor-control, pointer);
 }
 
 .block-editor-global-styles-state-control__badge-infotip-popup {
@@ -2454,7 +2458,7 @@ iframe[name=editor-canvas] {
   white-space: nowrap;
 }
 .block-editor-link-control__search-item:not(:focus, [aria-selected=true]) .components-menu-item__shortcut {
-  color: var(--wpds-color-foreground-content-neutral-weak, #707070);
+  color: var(--wpds-color-foreground-content-neutral-weak, #6e6e6e);
 }
 
 .block-editor-link-control__preview {
@@ -4066,7 +4070,7 @@ div.block-editor-bindings__panel button:hover .block-editor-bindings__item span 
 
 .block-editor-inserter__tip kbd {
   padding: 0 4px;
-  border: 1px solid var(--wpds-color-stroke-surface-neutral-strong, #8d8d8d);
+  border: 1px solid var(--wpds-color-stroke-surface-neutral-strong, #8b8b8b);
   border-radius: var(--wpds-border-radius-xs, 1px);
   font-family: var(--wpds-typography-font-family-mono, "Menlo", "Consolas", monaco, monospace);
   white-space: nowrap;
@@ -4161,6 +4165,12 @@ div.block-editor-bindings__panel button:hover .block-editor-bindings__item span 
   .block-editor-inserter__menu.show-panel {
     width: 630px;
   }
+}
+.block-editor-inserter__menu.has-single-tab .block-editor-tabbed-sidebar__tablist {
+  display: none;
+}
+.block-editor-inserter__menu.has-single-tab .block-editor-tabbed-sidebar__tablist-and-close-button {
+  justify-content: flex-end;
 }
 
 .block-editor-inserter__inline-elements {
@@ -4257,18 +4267,17 @@ div.block-editor-bindings__panel button:hover .block-editor-bindings__item span 
   display: none;
   width: 280px;
   padding: 16px;
+  color: #1e1e1e;
   max-height: calc(100% - 32px);
   overflow-y: hidden;
 }
 @media (min-width: 782px) {
   .block-editor-inserter__preview-container {
-    display: block;
+    display: flex;
   }
 }
 .block-editor-inserter__preview-container .block-editor-block-card {
-  padding-right: 0;
-  padding-left: 0;
-  padding-bottom: 4px;
+  padding: 0;
 }
 
 .block-editor-inserter__insertable-blocks-at-selection:not(:empty) + .block-editor-inserter__all-blocks:not(:empty) {
@@ -4338,13 +4347,9 @@ div.block-editor-bindings__panel button:hover .block-editor-bindings__item span 
 
 .block-editor-inserter__preview-content {
   background: #f0f0f0;
-  display: grid;
-  flex-grow: 1;
-  align-items: center;
 }
 
 .block-editor-inserter__preview-content-missing {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;

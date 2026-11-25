@@ -14776,6 +14776,59 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 			count: change.value.length
 		}));
 	}
+	function diffTokens(a, b, tokenizer) {
+		const tokenDiff = new Diff();
+		tokenDiff.tokenize = tokenizer;
+		tokenDiff.join = (tokens) => tokens.join("");
+		return tokenDiff.diff(a, b);
+	}
+	function computeDiff(a, b, options) {
+		if (!options?.tokenizer) return diffChars(a, b);
+		const { tokenizer, splitToken } = options;
+		const changes = diffTokens(a, b, tokenizer);
+		if (!splitToken) return changes;
+		const refined = [];
+		for (let i = 0; i < changes.length; i++) {
+			const removed = changes[i];
+			const added = changes[i + 1];
+			if (removed.removed && added?.added) {
+				const [oldFirst, ...oldRest] = tokenizer(removed.value);
+				const [newFirst, ...newRest] = tokenizer(added.value);
+				const oldParts = splitToken(oldFirst);
+				const newParts = splitToken(newFirst);
+				if (oldParts.length > 1 && newParts.length > 1 && oldParts[0] === newParts[0]) {
+					refined.push(...diffTokens(oldFirst, newFirst, splitToken));
+					if (oldRest.length > 0) refined.push({
+						value: oldRest.join(""),
+						count: oldRest.length,
+						added: false,
+						removed: true
+					});
+					if (newRest.length > 0) refined.push({
+						value: newRest.join(""),
+						count: newRest.length,
+						added: true,
+						removed: false
+					});
+					i++;
+					continue;
+				}
+			}
+			refined.push(removed);
+		}
+		return refined;
+	}
+	function isOffsetOnTokenBoundary(text, targetOffset, tokenizer) {
+		if (!tokenizer || targetOffset <= 0 || targetOffset >= text.length) return true;
+		const tokens = tokenizer(text);
+		let offset = 0;
+		for (const token of tokens) {
+			if (offset === targetOffset) return true;
+			if (offset > targetOffset) return false;
+			offset += token.length;
+		}
+		return offset === targetOffset;
+	}
 	const getEmbedTypeAndData = (a, b) => {
 		if (typeof a !== "object" || a === null) throw new Error(`cannot retain a ${typeof a}`);
 		if (typeof b !== "object" || b === null) throw new Error(`cannot retain a ${typeof b}`);
@@ -14962,10 +15015,10 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 			}
 			return delta;
 		}
-		diff(other) {
+		diff(other, options) {
 			if (this.ops === other.ops) return new Delta();
 			const strings = this.deltasToStrings(other);
-			const diffResult = normalizeChangeCounts(diffChars(strings[0], strings[1]));
+			const diffResult = normalizeChangeCounts(computeDiff(strings[0], strings[1], options));
 			const thisIter = new Iterator$1(this.ops);
 			const otherIter = new Iterator$1(other.ops);
 			return this.convertChangesToDelta(diffResult, thisIter, otherIter).chop();
@@ -15074,9 +15127,10 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		*
 		* @param other             - The other Delta to diff against.
 		* @param cursorAfterChange - The cursor position index after the change.
+		* @param options           - Optional diff options such as a custom tokenizer.
 		* @return A Delta that attempts to place insertions or deletions at the cursor position.
 		*/
-		diffWithCursor(other, cursorAfterChange) {
+		diffWithCursor(other, cursorAfterChange = null, options) {
 			if (this.ops === other.ops) return new Delta();
 			const strings = this.deltasToStrings(other);
 			if (Math.max(...strings.map((str) => str.length)) > STRING_TOO_LARGE_THRESHOLD) {
@@ -15084,8 +15138,8 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 				const thisIterLarge = new Iterator$1(this.ops);
 				const otherIterLarge = new Iterator$1(other.ops);
 				return this.convertChangesToDelta(diffResult, thisIterLarge, otherIterLarge).chop();
-			} else if (cursorAfterChange === null) return this.diff(other);
-			let diffs = normalizeChangeCounts(diffChars(strings[0], strings[1]));
+			} else if (cursorAfterChange === null) return this.diff(other, options);
+			let diffs = normalizeChangeCounts(computeDiff(strings[0], strings[1], options));
 			let lastDiffPosition = 0;
 			const adjustedDiffs = [];
 			for (let i = 0; i < diffs.length; i++) {
@@ -15098,7 +15152,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 				const nextDiff = diffs[i + 1];
 				const isNextDiffAnInsert = nextDiff && nextDiff.added && !nextDiff.removed;
 				if (isUnchangedSegment && isCursorInSegment && isNextDiffAnInsert) {
-					const movedSegments = this.tryMoveInsertionToCursor(diff, nextDiff, cursorAfterChange, segmentStart);
+					const movedSegments = this.tryMoveInsertionToCursor(diff, nextDiff, cursorAfterChange, segmentStart, options);
 					if (movedSegments) {
 						adjustedDiffs.push(...movedSegments);
 						i++;
@@ -15107,7 +15161,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 					}
 				}
 				if (isRemovalSegment) {
-					const movedSegments = this.tryMoveDeletionToCursor(diff, adjustedDiffs, cursorAfterChange, lastDiffPosition);
+					const movedSegments = this.tryMoveDeletionToCursor(diff, adjustedDiffs, cursorAfterChange, lastDiffPosition, options);
 					if (movedSegments) {
 						adjustedDiffs.pop();
 						adjustedDiffs.push(...movedSegments);
@@ -15131,12 +15185,14 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		* @param nextDiff          - The next diff segment (expected to be an insertion).
 		* @param cursorAfterChange - The cursor position after the change.
 		* @param segmentStart      - The start position of the current segment.
+		* @param options           - Optional diff options such as a custom tokenizer.
 		* @return An array of adjusted diff segments if the insertion was successfully moved, null otherwise.
 		*/
-		tryMoveInsertionToCursor(diff, nextDiff, cursorAfterChange, segmentStart) {
+		tryMoveInsertionToCursor(diff, nextDiff, cursorAfterChange, segmentStart, options) {
 			const nextDiffInsert = nextDiff.value;
 			const insertLength = nextDiffInsert.length;
 			const insertOffset = cursorAfterChange - segmentStart - insertLength;
+			if (!isOffsetOnTokenBoundary(diff.value, insertOffset, options?.tokenizer)) return null;
 			if (!(diff.value.substring(insertOffset, insertOffset + nextDiffInsert.length) === nextDiffInsert)) return null;
 			const beforeCursor = diff.value.substring(0, insertOffset);
 			const afterCursor = diff.value.substring(insertOffset);
@@ -15164,15 +15220,17 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		* @param adjustedDiffs     - The array of previously processed diff segments.
 		* @param cursorAfterChange - The cursor position after the change.
 		* @param lastDiffPosition  - The position in the document up to (but not including) the current diff.
+		* @param options           - Optional diff options such as a custom tokenizer.
 		* @return An array of adjusted diff segments if the deletion was successfully moved, null otherwise.
 		*/
-		tryMoveDeletionToCursor(diff, adjustedDiffs, cursorAfterChange, lastDiffPosition) {
+		tryMoveDeletionToCursor(diff, adjustedDiffs, cursorAfterChange, lastDiffPosition, options) {
 			const prevDiff = adjustedDiffs[adjustedDiffs.length - 1];
 			if (!prevDiff || prevDiff.added || prevDiff.removed) return null;
 			const prevSegmentStart = lastDiffPosition - (prevDiff.count ?? 0);
 			if (cursorAfterChange < prevSegmentStart || cursorAfterChange >= lastDiffPosition) return null;
 			const deletedChars = diff.value;
 			const deleteOffset = cursorAfterChange - prevSegmentStart;
+			if (!isOffsetOnTokenBoundary(prevDiff.value, deleteOffset, options?.tokenizer) || !isOffsetOnTokenBoundary(prevDiff.value, deleteOffset + deletedChars.length, options?.tokenizer)) return null;
 			if (!(prevDiff.value.substring(deleteOffset, deleteOffset + deletedChars.length) === deletedChars)) return null;
 			const beforeCursor = prevDiff.value.substring(0, deleteOffset);
 			const atAndAfterCursor = prevDiff.value.substring(deleteOffset);
@@ -15952,6 +16010,29 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		}
 		return null;
 	}
+	/**
+	* Split an HTML string so that tags, comments, and character entities are
+	* each one token. All other text is split into single code points.
+	*
+	* @param html The HTML string to split.
+	* @return The list of tokens.
+	*/
+	function tokenizeHtml(html) {
+		return html.match(/<!--[\s\S]*?-->|<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:"[^"]*"|'[^']*'|[^'">])*>|&[a-zA-Z0-9#]+;|[\s\S]/gu) ?? [];
+	}
+	/**
+	* Split an opening HTML tag into its name, each attribute, and the closing
+	* bracket. Anything that is not an opening tag is returned whole.
+	*
+	* `<a href="x" target="_blank">` becomes `<a`, ` href="x"`, ` target="_blank"`, `>`.
+	*
+	* @param token One token from `tokenizeHtml`.
+	* @return The parts of the token.
+	*/
+	function splitHtmlTag(token) {
+		if (!/^<[a-zA-Z]/.test(token)) return [token];
+		return token.match(/^<[a-zA-Z][a-zA-Z0-9:-]*|\s+[^\s"'>=/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>]+))?|[\s\S]/gu) ?? [token];
+	}
 
 // packages/core-data/build-module/utils/crdt-user-selections.mjs
 /**
@@ -16560,6 +16641,54 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		});
 	}
 	/**
+	* Check whether the parser would build different blocks from the post content
+	* today than the blocks stored in a persisted CRDT document.
+	*
+	* A persisted CRDT document stores the blocks the editor had at the time. The
+	* loader decides whether to keep that document by serializing its blocks and
+	* comparing the result to the saved content. Two kinds of block serialize back
+	* to the markup they were loaded from, so that comparison cannot see that the
+	* parser would now treat them differently:
+	*
+	* - A missing block, stored while its block type was unavailable (for example,
+	*   its plugin was deactivated). Once the type is registered again, the parser
+	*   would build the real block.
+	* - An invalid block, stored while its markup did not match its block type's
+	*   save output (for example, after a plugin update). Once the block type or a
+	*   deprecation accepts the markup again, the parser would build a valid block.
+	*
+	* The reverse of the first case also applies: a block whose type is no longer
+	* registered cannot be edited or serialized by this client.
+	*
+	* @param blocks Blocks as stored in the CRDT document, as plain objects.
+	* @return True when at least one block should be re-parsed from the content.
+	*/
+	function shouldReparseBlocks(blocks) {
+		const missingBlockName = (0, _wordpress_blocks.getUnregisteredTypeHandlerName)();
+		return blocks.some((block) => {
+			if (block.name === missingBlockName) {
+				const { originalName } = block.attributes ?? {};
+				if ("string" === typeof originalName && (0, _wordpress_blocks.getBlockType)(originalName)) return true;
+			} else if (!(0, _wordpress_blocks.getBlockType)(block.name)) return true;
+			else if (false === block.isValid && isBlockValidNow(block)) return true;
+			return shouldReparseBlocks(block.innerBlocks ?? []);
+		});
+	}
+	/**
+	* Check whether a block stored as invalid would parse as valid now.
+	*
+	* An invalid block serializes back to the markup it was loaded from, so
+	* parsing that markup again asks the same question the editor asked when it
+	* loaded the post, including any deprecations added since.
+	*
+	* @param block A block stored with `isValid: false`.
+	* @return True when the parser would now build a valid block from its markup.
+	*/
+	function isBlockValidNow(block) {
+		const [reparsedBlock] = (0, _wordpress_blocks.parse)((0, _wordpress_blocks.serialize)([block]));
+		return true === reparsedBlock?.isValid;
+	}
+	/**
 	* @param {any}   gblock
 	* @param {Y.Map} yblock
 	*/
@@ -16926,7 +17055,11 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 	function mergeRichTextUpdate(blockYText, updatedValue, htmlCursorIndex = null) {
 		const currentValueAsDelta = new Delta(blockYText.toDelta());
 		const updatedValueAsDelta = new Delta([{ insert: updatedValue }]);
-		const deltaDiff = currentValueAsDelta.diffWithCursor(updatedValueAsDelta, htmlCursorIndex);
+		const diffOptions = {
+			tokenizer: tokenizeHtml,
+			splitToken: splitHtmlTag
+		};
+		const deltaDiff = currentValueAsDelta.diffWithCursor(updatedValueAsDelta, htmlCursorIndex, diffOptions);
 		/**
 		* When there is no cursor involved, or when the diff is able to shuffle properly
 		* around the cursor then apply that already-computed diff.
@@ -16937,7 +17070,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		*
 		* @see Delta.diffWithCursor()
 		*/
-		const safeDiff = htmlCursorIndex === null || isDeltaVerificationMatch(blockYText, deltaDiff, updatedValue) ? deltaDiff : currentValueAsDelta.diff(updatedValueAsDelta);
+		const safeDiff = htmlCursorIndex === null || isDeltaVerificationMatch(blockYText, deltaDiff, updatedValue) ? deltaDiff : currentValueAsDelta.diff(updatedValueAsDelta, diffOptions);
 		blockYText.applyDelta(safeDiff.ops);
 	}
 	/**
@@ -17333,6 +17466,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 				case "blocks":
 					if (ydoc.meta?.get("fromPersistence") && editedRecord.content) {
 						const blocksJson = ymap.get("blocks")?.toJSON() ?? [];
+						if (shouldReparseBlocks(blocksJson)) return true;
 						return (0, _wordpress_blocks.__unstableSerializeAndClean)(blocksJson).trim() !== getRawValue(editedRecord.content);
 					}
 					return true;
@@ -18287,7 +18421,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 	* @return Next state.
 	*/
 	const receiveQueries = (0, _wordpress_compose.compose)([
-		ifMatchingAction((action) => "query" in action),
+		ifMatchingAction((action) => "query" in action && Array.isArray(action.items)),
 		replaceAction((action) => {
 			if (action.query) return {
 				...action,
@@ -18299,7 +18433,6 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		(0, _wordpress_data.keyedReducer)("stableKey")
 	])((state = {}, action) => {
 		if (action.type !== "RECEIVE_ITEMS") return state;
-		if (!Array.isArray(action.items)) return state;
 		const key = action.key ?? "id";
 		return {
 			itemIds: getMergedItemIds(state.itemIds, action.items.map((item) => item?.[key]).filter(Boolean), {
@@ -22090,6 +22223,22 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		}, 0) / searchTokens.length * 10;
 	}
 	/**
+	* Whether a title is exactly what was typed.
+	*
+	* Compares words, not the strings typed, so punctuation does not count: for the search
+	* "coffee beans", "Coffee Beans" and "Coffee Beans." are both exact, and
+	* "Coffee Beans, Lightly Roasted" is not.
+	*
+	* @param title
+	* @param searchTokens
+	*
+	* @return Whether the title's words are the words typed, in the same order.
+	*/
+	function isExactTitle(title, searchTokens) {
+		const titleTokens = tokenize(title || "");
+		return titleTokens.length > 0 && titleTokens.join(" ") === searchTokens.join(" ");
+	}
+	/**
 	* Sort search results by relevance to the given query.
 	*
 	* Sorting is necessary as we're querying multiple endpoints and merging the results. For example
@@ -22103,9 +22252,11 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 	* 2. Ordering of the title matches. "The best coffee beans today" will match above "For the best
 	*    coffee, you need the best beans" because of the separation between words
 	* 3. Content Type: content > taxonomies > post formats > media
-	* 4. Starting with search: "Coffee beans, lightly roasted" will rank above "The freshest coffee
+	* 4. Exact title: "Coffee beans" and "“Coffee beans”" will rank above "Coffee beans, lightly
+	*    roasted"
+	* 5. Starting with search: "Coffee beans, lightly roasted" will rank above "The freshest coffee
 	*    beans"
-	* 5. Percentage of matched word: "cat" ranks the title "Cats" above the title "Caterpillar" since
+	* 6. Percentage of matched word: "cat" ranks the title "Cats" above the title "Caterpillar" since
 	*    cat is 75% of "Cats" and only 27% of "Caterpillar"
 	*
 	* @param options
@@ -22120,9 +22271,10 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 			found: countWordsFound(result.title, searchTokens),
 			...getTitleMatch(result.title, search),
 			type: getTypeRank(result, preferTypes),
-			score: getCoverage(result.title, searchTokens)
+			score: getCoverage(result.title, searchTokens),
+			exact: isExactTitle(result.title, searchTokens)
 		}));
-		scored.sort((a, b) => b.found - a.found || Number(b.contains) - Number(a.contains) || b.type - a.type || Number(b.begins) - Number(a.begins) || b.score - a.score);
+		scored.sort((a, b) => b.found - a.found || Number(b.contains) - Number(a.contains) || b.type - a.type || Number(b.exact) - Number(a.exact) || Number(b.begins) - Number(a.begins) || b.score - a.score);
 		return scored.map(({ result }) => result);
 	}
 	/**
@@ -23752,7 +23904,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 	* application, the appropriate permissions and the resolution details will be retrieved from
 	* the store state using `canUser()`, or resolved if missing.
 	*
-	* @return Entity records data.
+	* @return Resource permissions and resolution details.
 	* @template IdType
 	*/
 	function useResourcePermissions(resource, id) {

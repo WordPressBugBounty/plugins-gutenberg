@@ -6119,6 +6119,17 @@ var import_es6 = /* @__PURE__ */ __toESM(require_es6(), 1);
 			name = "core/comments";
 			newAttributes.legacy = true;
 		}
+		if (name === "core/cover" && attributes.minHeight) {
+			const coverStyle = newAttributes.style ?? {};
+			const dimensions = coverStyle.dimensions ?? {};
+			if (!dimensions.minHeight) newAttributes.style = {
+				...coverStyle,
+				dimensions: {
+					...dimensions,
+					minHeight: `${attributes.minHeight}${attributes.minHeightUnit || "px"}`
+				}
+			};
+		}
 		const layout = attributes.layout;
 		if (layout?.type === "grid" && typeof layout?.columnCount === "string") newAttributes.layout = {
 			...newAttributes.layout,
@@ -7706,11 +7717,8 @@ var import_es6 = /* @__PURE__ */ __toESM(require_es6(), 1);
 		else if (node.nodeName === "I") (0, _wordpress_dom.replaceTag)(node, "em");
 		else if (node.nodeName === "A") {
 			const anchor = node;
-			if (anchor.target && anchor.target.toLowerCase() === "_blank") anchor.rel = "noopener";
-			else {
-				anchor.removeAttribute("target");
-				anchor.removeAttribute("rel");
-			}
+			if (!anchor.target || anchor.target.toLowerCase() !== "_blank") anchor.removeAttribute("target");
+			anchor.removeAttribute("rel");
 			if (anchor.name && !anchor.id) anchor.id = anchor.name;
 			if (anchor.id && !anchor.ownerDocument.querySelector(`[href="#${anchor.id}"]`)) anchor.removeAttribute("id");
 		}

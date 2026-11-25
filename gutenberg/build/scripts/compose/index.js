@@ -713,6 +713,7 @@ _wordpress_deprecated = __toESM(_wordpress_deprecated, 1);
 		return useRefEffect((node) => {
 			let isActive = true;
 			const handleClick = async () => {
+				if (node.getAttribute("aria-disabled") === "true") return;
 				if (await copyToClipboard(typeof textRef.current === "function" ? textRef.current() : textRef.current || "", node)) {
 					if (isActive) restoreFocus(node);
 					if (onSuccessRef.current) onSuccessRef.current();
@@ -2770,6 +2771,7 @@ var import_mousetrap = /* @__PURE__ */ __toESM(require_mousetrap(), 1);
 			element.addEventListener("dragover", onDragOver);
 			element.addEventListener("dragleave", onDragLeave);
 			ownerDocument.addEventListener("dragenter", maybeDragStart);
+			ownerDocument.addEventListener("dragover", maybeDragStart, true);
 			return () => {
 				element.removeAttribute("data-is-drop-zone");
 				element.removeEventListener("drop", onDrop);
@@ -2779,6 +2781,7 @@ var import_mousetrap = /* @__PURE__ */ __toESM(require_mousetrap(), 1);
 				ownerDocument.removeEventListener("dragend", maybeDragEnd);
 				ownerDocument.removeEventListener("mousemove", maybeDragEnd);
 				ownerDocument.removeEventListener("dragenter", maybeDragStart);
+				ownerDocument.removeEventListener("dragover", maybeDragStart, true);
 			};
 		}, [isDisabled, dropZoneElement]);
 	}

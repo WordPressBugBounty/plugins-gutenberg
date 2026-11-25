@@ -174,8 +174,8 @@ body.admin-color-fresh {
   display: flex;
   justify-content: flex-end;
   margin: -15px -12px 0 -12px;
-  background: #f0f0f1;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--wpds-color-background-surface-neutral, #fcfcfc);
+  border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral, #dbdbdb);
   z-index: 8;
 }
 
@@ -195,7 +195,22 @@ body.admin-color-fresh {
 }
 .customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon.is-pressed,
 .customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon.is-pressed {
-  background: #1e1e1e;
+  background: var(--wpds-color-background-interactive-neutral-strong-active, #1e1e1e);
+}
+.customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon.is-pressed:is(:disabled, [aria-disabled=true]),
+.customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon.is-pressed:is(:disabled, [aria-disabled=true]) {
+  background: var(--wpds-color-background-interactive-neutral-strong-disabled, #e5e5e5);
+}
+@media (forced-colors: active) {
+  .customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon.is-pressed,
+  .customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon.is-pressed {
+    background: SelectedItem !important;
+  }
+  .customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon.is-pressed:disabled, .customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon.is-pressed[aria-disabled=true],
+  .customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon.is-pressed:disabled,
+  .customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon.is-pressed[aria-disabled=true] {
+    background: GrayText !important;
+  }
 }
 .customize-widgets-header-toolbar > .components-button.has-icon.has-icon.has-icon:focus:not(:active),
 .customize-widgets-header-toolbar > .components-dropdown > .components-button.has-icon.has-icon:focus:not(:active) {
@@ -208,7 +223,6 @@ body.admin-color-fresh {
 }
 .customize-widgets-header-toolbar .customize-widgets-header-toolbar__inserter-toggle.components-button.has-icon {
   border-radius: 2px;
-  color: #fff;
   margin: 12px auto 12px 0;
 }
 @media not (prefers-reduced-motion) {
@@ -234,6 +248,10 @@ body.admin-color-fresh {
 
 .customize-widgets-layout__inserter-panel {
   background: #fff;
+}
+
+.customize-widgets-layout__inserter-panel-content .block-editor-inserter__menu.has-single-tab .block-editor-tabbed-sidebar__tablist-and-close-button {
+  display: none;
 }
 
 .customize-widgets-layout__inserter-panel-header {
@@ -297,7 +315,7 @@ body.admin-color-fresh {
   margin: 0 0.2rem 0 0.2rem;
 }
 .customize-widgets-keyboard-shortcut-help-modal__shortcut-key:last-child {
-  margin: 0 0.2rem 0 0;
+  margin-inline-end: 0;
 }
 
 .components-popover.more-menu-dropdown__content {
